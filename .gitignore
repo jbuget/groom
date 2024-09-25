@@ -11,7 +11,6 @@
 
 # Modules Go
 /go.sum
-/go.mod
 
 # Données locales et fichiers de configuration
 .env

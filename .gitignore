@@ -33,7 +33,7 @@
 /dist/
 
 # Binaire généré de l'application Ushr
-ushr
+#ushr
 
 # PostgreSQL
 *.sql

@@ -9,9 +9,6 @@
 # Dossier d'installation des dépendances Go
 /vendor/
 
-# Modules Go
-/go.sum
-
 # Données locales et fichiers de configuration
 .env
 *.env

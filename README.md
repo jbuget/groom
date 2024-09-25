@@ -1,22 +1,46 @@
-# Démarrer Postgres via Docker Compose
+# Installation
+
+Démarrer Postgres via Docker Compose
+
+```shell
 docker compose up -d
+```
 
-# Configurer l'environnement
-export DATABASE_URL=postgres://postgres:password@localhost:5432/ushr
+Configurer l'environnement
 
-# Initialiser le projet
+```shell
+export DATABASE_URL=postgres://postgres:password@localhost:5432/ushr \
+    BASIC_AUTH_LOGIN=admin \
+    BASIC_AUTH_PASSWORD=admin
+```
+
+Initialiser le projet
+
+```shell
 go mod init ushr
+```
 
-# To add module requirements and sums:
+To add module requirements and sums:
+
+```shell
 go mod tidy
+```
 
-# Installer la dépendnce stdlib
+Installer la dépendnce stdlib
+
+```shell
 go get github.com/jackc/pgx/v4/stdlib
+```
 
-# Lancer l'application
+Lancer l'application
+
+```shell
 go run main.go
+````
 
-# URL HTML
+# Usage
+
+## URL HTML
 
 ```shell
 # Afficher la liste des rooms
@@ -26,7 +50,8 @@ http://localhost:8080
 http://localhost:8080/ma-room
 ```
 
-# Gérer les rooms
+## API
+
 ```shell
 # Lister les rooms
 curl -X GET http://localhost:8080/api/rooms

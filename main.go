@@ -22,6 +22,19 @@ type Room struct {
     MeetID string `json:"meet_id"`
 }
 
+// Middleware pour protéger l'accès avec un mot de passe
+func basicAuth(next http.HandlerFunc, username, password string) http.HandlerFunc {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        user, pass, ok := r.BasicAuth()
+        if !ok || user != username || pass != password {
+            w.Header().Set("WWW-Authenticate", `Basic realm="restricted"`)
+            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+            return
+        }
+        next(w, r)
+    })
+}
+
 // Fonction pour récupérer toutes les rooms depuis la base de données
 func getAllRooms() ([]Room, error) {
     var rooms []Room
@@ -176,8 +189,12 @@ func main() {
     }
     defer db.Close()
 
-    // Route par défaut pour lister les rooms ou rediriger
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+    // Définir les identifiants pour l'accès protégé
+    username := os.Getenv("BASIC_AUTH_LOGIN")        // Remplacez par votre nom d'utilisateur
+    password := os.Getenv("BASIC_AUTH_PASSWORD")  // Remplacez par votre mot de passe
+
+    // Route par défaut pour lister les rooms ou rediriger, protégée par mot de passe
+    http.HandleFunc("/", basicAuth(func(w http.ResponseWriter, r *http.Request) {
         if r.URL.Path == "/" {
             // Si l'URL est la racine, lister les rooms
             listRoomsHTMLHandler(w, r)
@@ -185,7 +202,7 @@ func main() {
             // Sinon, traiter comme un slug
             redirectHandler(w, r)
         }
-    })
+    }, username, password))
 
     // Routes sous /api pour les opérations JSON
     http.HandleFunc("/api/rooms", func(w http.ResponseWriter, r *http.Request) {

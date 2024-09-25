@@ -1,0 +1,42 @@
+# Binaires Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dossier d'installation des dépendances Go
+/vendor/
+
+# Modules Go
+/go.sum
+/go.mod
+
+# Données locales et fichiers de configuration
+.env
+*.env
+
+# Fichiers de logs
+*.log
+
+# Fichiers temporaires ou compilés
+*.tmp
+*.swp
+*.DS_Store
+*.idea/
+.vscode/
+.history/
+
+# Cache et artefacts
+/.cache/
+/tmp/
+/dist/
+
+# Binaire généré de l'application Ushr
+ushr
+
+# PostgreSQL
+*.sql
+
+postgres-data/

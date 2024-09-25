@@ -11,7 +11,8 @@ Configurer l'environnement
 ```shell
 export DATABASE_URL=postgres://postgres:password@localhost:5432/ushr \
     BASIC_AUTH_LOGIN=admin \
-    BASIC_AUTH_PASSWORD=admin
+    BASIC_AUTH_PASSWORD=admin \
+    USHR_API_KEY=your_api_key_here
 ```
 
 Initialiser le projet
@@ -26,12 +27,6 @@ To add module requirements and sums:
 go mod tidy
 ```
 
-Installer la dépendnce stdlib
-
-```shell
-go get github.com/jackc/pgx/v4/stdlib
-```
-
 Lancer l'application
 
 ```shell
@@ -44,24 +39,24 @@ go run main.go
 
 ```shell
 # Afficher la liste des rooms
-http://localhost:8080
+http://localhost:3000
 
 # Accéder à une room 
-http://localhost:8080/ma-room
+http://localhost:3000/ma-room
 ```
 
 ## API
 
 ```shell
 # Lister les rooms
-curl -X GET http://localhost:8080/api/rooms
+curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
 
 # Ajouter une room
-curl -X POST http://localhost:8080/api/rooms -d '{"slug":"nouvelle-salle", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json"
+curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Modifiez une room existante
-curl -X PUT http://localhost:8080/api/rooms/2 -d '{"slug":"salle-existante", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json"
+curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Supprimez une room
-curl -X DELETE http://localhost:8080/api/rooms/1
+curl -X DELETE http://localhost:3000/api/rooms/1
 ```

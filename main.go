@@ -35,6 +35,27 @@ func basicAuth(next http.HandlerFunc, username, password string) http.HandlerFun
     })
 }
 
+// Middleware pour vérifier la clé d'API
+func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        apiKey := os.Getenv("USHR_API_KEY")
+        if apiKey == "" {
+            http.Error(w, "API key not configured", http.StatusInternalServerError)
+            return
+        }
+
+        // Récupérer la clé d'API envoyée dans les en-têtes
+        requestApiKey := r.Header.Get("X-API-KEY")
+        if requestApiKey != apiKey {
+            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+            return
+        }
+
+        // Si la clé est valide, continuer vers le prochain handler
+        next(w, r)
+    })
+}
+
 // Fonction pour récupérer toutes les rooms depuis la base de données
 func getAllRooms() ([]Room, error) {
     var rooms []Room
@@ -189,9 +210,20 @@ func main() {
     }
     defer db.Close()
 
+    // Récupérer les variables d'environnement HOST et PORT
+    host := os.Getenv("HOST")
+    if host == "" {
+        host = "0.0.0.0" // Par défaut, écouter sur toutes les interfaces
+    }
+
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "3000" // Par défaut, écouter sur le port 3080
+    }
+	
     // Définir les identifiants pour l'accès protégé
-    username := os.Getenv("BASIC_AUTH_LOGIN")        // Remplacez par votre nom d'utilisateur
-    password := os.Getenv("BASIC_AUTH_PASSWORD")  // Remplacez par votre mot de passe
+    username := os.Getenv("BASIC_AUTH_LOGIN")		// Remplacez par votre nom d'utilisateur
+    password := os.Getenv("BASIC_AUTH_PASSWORD")	// Remplacez par votre mot de passe
 
     // Route par défaut pour lister les rooms ou rediriger, protégée par mot de passe
     http.HandleFunc("/", basicAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -204,19 +236,19 @@ func main() {
         }
     }, username, password))
 
-    // Routes sous /api pour les opérations JSON
-    http.HandleFunc("/api/rooms", func(w http.ResponseWriter, r *http.Request) {
+    // Routes sous /api pour les opérations JSON protégées par clé d'API
+    http.HandleFunc("/api/rooms", apiKeyMiddleware(func(w http.ResponseWriter, r *http.Request) {
         switch r.Method {
         case http.MethodGet:
-            listRoomsJSONHandler(w, r) // Nouveau handler pour GET /api/rooms
+            listRoomsJSONHandler(w, r)
         case http.MethodPost:
             createRoomHandler(w, r)
         default:
             http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         }
-    })
+    }))
 
-    http.HandleFunc("/api/rooms/", func(w http.ResponseWriter, r *http.Request) {
+    http.HandleFunc("/api/rooms/", apiKeyMiddleware(func(w http.ResponseWriter, r *http.Request) {
         switch r.Method {
         case http.MethodPut:
             updateRoomHandler(w, r)
@@ -225,8 +257,10 @@ func main() {
         default:
             http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         }
-    })
+    }))
 
-    fmt.Println("Server started at http://localhost:8080")
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    // Lancer le serveur sur l'hôte et le port définis
+    addr := fmt.Sprintf("%s:%s", host, port)
+    fmt.Printf("Server started at %s\n", addr)
+    log.Fatal(http.ListenAndServe(addr, nil))
 }

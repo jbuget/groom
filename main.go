@@ -2,13 +2,11 @@ package main
 
 import (
     "database/sql"
-    "encoding/json"
-    "fmt"
+    "github.com/gin-gonic/gin"
     "log"
     "net/http"
     "os"
     "strconv"
-    "strings"
 
     _ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -22,38 +20,39 @@ type Room struct {
     MeetID string `json:"meet_id"`
 }
 
-// Middleware pour protéger l'accès avec un mot de passe
-func basicAuth(next http.HandlerFunc, username, password string) http.HandlerFunc {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        user, pass, ok := r.BasicAuth()
-        if !ok || user != username || pass != password {
-            w.Header().Set("WWW-Authenticate", `Basic realm="restricted"`)
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+// Middleware pour l'authentification basique
+func basicAuthMiddleware(username, password string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        user, pass, hasAuth := c.Request.BasicAuth()
+        if !hasAuth || user != username || pass != password {
+            c.Header("WWW-Authenticate", `Basic realm="restricted"`)
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+            c.Abort()
             return
         }
-        next(w, r)
-    })
+        c.Next()
+    }
 }
 
 // Middleware pour vérifier la clé d'API
-func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func apiKeyMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
         apiKey := os.Getenv("USHR_API_KEY")
         if apiKey == "" {
-            http.Error(w, "API key not configured", http.StatusInternalServerError)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "API key not configured"})
+            c.Abort()
             return
         }
 
-        // Récupérer la clé d'API envoyée dans les en-têtes
-        requestApiKey := r.Header.Get("X-API-KEY")
+        requestApiKey := c.GetHeader("X-API-KEY")
         if requestApiKey != apiKey {
-            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+            c.Abort()
             return
         }
 
-        // Si la clé est valide, continuer vers le prochain handler
-        next(w, r)
-    })
+        c.Next()
+    }
 }
 
 // Fonction pour récupérer toutes les rooms depuis la base de données
@@ -73,137 +72,113 @@ func getAllRooms() ([]Room, error) {
         rooms = append(rooms, room)
     }
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
-
     return rooms, nil
 }
 
-// Handler pour afficher la liste des rooms
-func listRoomsHTMLHandler(w http.ResponseWriter, r *http.Request) {
+// Handler pour afficher la liste des rooms en HTML
+func listRoomsHTMLHandler(c *gin.Context) {
     rooms, err := getAllRooms()
     if err != nil {
-        http.Error(w, "Unable to retrieve rooms", http.StatusInternalServerError)
+        c.String(http.StatusInternalServerError, "Unable to retrieve rooms")
         return
     }
 
-    // Génération de la réponse HTML simple
-    fmt.Fprintf(w, "<h1>Liste des salles</h1>")
-    fmt.Fprintf(w, "<ul>")
-    for _, room := range rooms {
-        roomURL := fmt.Sprintf("https://meet.google.com/%s", room.MeetID)
-        fmt.Fprintf(w, `<li><strong>%s</strong>: <a href="%s" target="_blank">%s</a></li>`, room.Slug, roomURL, roomURL)
-    }
-    fmt.Fprintf(w, "</ul>")
+    c.HTML(http.StatusOK, "list.html", gin.H{
+        "rooms": rooms,
+    })
 }
 
-// Handler pour lister les rooms en format JSON
-func listRoomsJSONHandler(w http.ResponseWriter, r *http.Request) {
+// Handler pour lister les rooms en JSON
+func listRoomsJSONHandler(c *gin.Context) {
     rooms, err := getAllRooms()
     if err != nil {
-        http.Error(w, "Unable to retrieve rooms", http.StatusInternalServerError)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve rooms"})
         return
     }
 
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(rooms)
+    c.JSON(http.StatusOK, rooms)
 }
 
 // Handler pour rediriger en fonction du slug
-func redirectHandler(w http.ResponseWriter, r *http.Request) {
-    slug := strings.TrimPrefix(r.URL.Path, "/") // Récupère le slug sans le "/"
-    meetID, err := getMeetIDFromSlug(slug)
-    if err != nil {
-        http.Error(w, "Room not found", http.StatusNotFound)
-        return
-    }
-
-    targetURL := fmt.Sprintf("https://meet.google.com/%s", meetID)
-    http.Redirect(w, r, targetURL, http.StatusFound)
-}
-
-// Fonction pour récupérer l'ID de la room Google Meet à partir du slug
-func getMeetIDFromSlug(slug string) (string, error) {
+func redirectHandler(c *gin.Context) {
+    slug := c.Param("slug")
     var meetID string
     query := "SELECT meet_id FROM rooms WHERE slug = $1"
     err := db.QueryRow(query, slug).Scan(&meetID)
     if err != nil {
-        return "", err
+        c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+        return
     }
-    return meetID, nil
+
+    c.Redirect(http.StatusFound, "https://meet.google.com/"+meetID)
 }
 
 // Handler POST pour ajouter une room
-func createRoomHandler(w http.ResponseWriter, r *http.Request) {
+func createRoomHandler(c *gin.Context) {
     var room Room
-    err := json.NewDecoder(r.Body).Decode(&room)
-    if err != nil {
-        http.Error(w, "Invalid input", http.StatusBadRequest)
+    if err := c.BindJSON(&room); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
         return
     }
 
     query := "INSERT INTO rooms (slug, meet_id) VALUES ($1, $2) RETURNING id"
-    err = db.QueryRow(query, room.Slug, room.MeetID).Scan(&room.ID)
+    err := db.QueryRow(query, room.Slug, room.MeetID).Scan(&room.ID)
     if err != nil {
-        http.Error(w, "Error inserting room", http.StatusInternalServerError)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting room"})
         return
     }
 
-    w.WriteHeader(http.StatusCreated)
-    json.NewEncoder(w).Encode(room)
+    c.JSON(http.StatusCreated, room)
 }
 
 // Handler PUT pour modifier une room
-func updateRoomHandler(w http.ResponseWriter, r *http.Request) {
-    idStr := strings.TrimPrefix(r.URL.Path, "/api/rooms/")
+func updateRoomHandler(c *gin.Context) {
+    idStr := c.Param("id")
     id, err := strconv.Atoi(idStr)
     if err != nil {
-        http.Error(w, "Invalid room ID", http.StatusBadRequest)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room ID"})
         return
     }
 
     var room Room
-    err = json.NewDecoder(r.Body).Decode(&room)
-    if err != nil {
-        http.Error(w, "Invalid input", http.StatusBadRequest)
+    if err := c.BindJSON(&room); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
         return
     }
 
     query := "UPDATE rooms SET slug = $1, meet_id = $2 WHERE id = $3"
     _, err = db.Exec(query, room.Slug, room.MeetID, id)
     if err != nil {
-        http.Error(w, "Error updating room", http.StatusInternalServerError)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating room"})
         return
     }
 
-    w.WriteHeader(http.StatusOK)
-    fmt.Fprintf(w, "Room updated successfully")
+    c.JSON(http.StatusOK, gin.H{"message": "Room updated successfully"})
 }
 
 // Handler DELETE pour supprimer une room
-func deleteRoomHandler(w http.ResponseWriter, r *http.Request) {
-    idStr := strings.TrimPrefix(r.URL.Path, "/api/rooms/")
+func deleteRoomHandler(c *gin.Context) {
+    idStr := c.Param("id")
     id, err := strconv.Atoi(idStr)
     if err != nil {
-        http.Error(w, "Invalid room ID", http.StatusBadRequest)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid room ID"})
         return
     }
 
     query := "DELETE FROM rooms WHERE id = $1"
     _, err = db.Exec(query, id)
     if err != nil {
-        http.Error(w, "Error deleting room", http.StatusInternalServerError)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting room"})
         return
     }
 
-    w.WriteHeader(http.StatusOK)
-    fmt.Fprintf(w, "Room deleted successfully")
+    c.JSON(http.StatusOK, gin.H{"message": "Room deleted successfully"})
 }
 
 func main() {
+    // Connexion à la base de données
     var err error
-    dbURL := os.Getenv("DATABASE_URL") // Ex: postgres://user:pass@localhost:5432/dbname
+    dbURL := os.Getenv("DATABASE_URL")
     db, err = sql.Open("pgx", dbURL)
     if err != nil {
         log.Fatalf("Unable to connect to database: %v\n", err)
@@ -213,54 +188,43 @@ func main() {
     // Récupérer les variables d'environnement HOST et PORT
     host := os.Getenv("HOST")
     if host == "" {
-        host = "0.0.0.0" // Par défaut, écouter sur toutes les interfaces
+        host = "0.0.0.0"
     }
 
     port := os.Getenv("PORT")
     if port == "" {
-        port = "3000" // Par défaut, écouter sur le port 3080
+        port = "3000"
     }
-	
-    // Définir les identifiants pour l'accès protégé
-    username := os.Getenv("BASIC_AUTH_LOGIN")		// Remplacez par votre nom d'utilisateur
-    password := os.Getenv("BASIC_AUTH_PASSWORD")	// Remplacez par votre mot de passe
 
-    // Route par défaut pour lister les rooms ou rediriger, protégée par mot de passe
-    http.HandleFunc("/", basicAuth(func(w http.ResponseWriter, r *http.Request) {
-        if r.URL.Path == "/" {
-            // Si l'URL est la racine, lister les rooms
-            listRoomsHTMLHandler(w, r)
-        } else {
-            // Sinon, traiter comme un slug
-            redirectHandler(w, r)
-        }
-    }, username, password))
+    // Définir les identifiants pour l'authentification basique
+    username := os.Getenv("BASIC_AUTH_LOGIN")
+    password := os.Getenv("BASIC_AUTH_PASSWORD")
+
+    // Création du routeur Gin
+    r := gin.Default()
+    
+    // Chargement des templates HTML
+    r.LoadHTMLGlob("templates/*")
+
+    // Appliquer basicAuth uniquement à la route racine "/"
+    r.GET("/", basicAuthMiddleware(username, password), listRoomsHTMLHandler)
+
+    // La route "/:slug" redirige sans authentification
+    r.GET("/:slug", redirectHandler)
 
     // Routes sous /api pour les opérations JSON protégées par clé d'API
-    http.HandleFunc("/api/rooms", apiKeyMiddleware(func(w http.ResponseWriter, r *http.Request) {
-        switch r.Method {
-        case http.MethodGet:
-            listRoomsJSONHandler(w, r)
-        case http.MethodPost:
-            createRoomHandler(w, r)
-        default:
-            http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-        }
-    }))
+    api := r.Group("/api", apiKeyMiddleware())
+    {
+        api.GET("/rooms", listRoomsJSONHandler)
+        api.POST("/rooms", createRoomHandler)
+        api.PUT("/rooms/:id", updateRoomHandler)
+        api.DELETE("/rooms/:id", deleteRoomHandler)
+    }
 
-    http.HandleFunc("/api/rooms/", apiKeyMiddleware(func(w http.ResponseWriter, r *http.Request) {
-        switch r.Method {
-        case http.MethodPut:
-            updateRoomHandler(w, r)
-        case http.MethodDelete:
-            deleteRoomHandler(w, r)
-        default:
-            http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-        }
-    }))
-
-    // Lancer le serveur sur l'hôte et le port définis
-    addr := fmt.Sprintf("%s:%s", host, port)
-    fmt.Printf("Server started at %s\n", addr)
-    log.Fatal(http.ListenAndServe(addr, nil))
+    // Démarrer le serveur
+    addr := host + ":" + port
+    log.Printf("Server started at %s", addr)
+    if err := r.Run(addr); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }

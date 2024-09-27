@@ -3,19 +3,22 @@ package handlers
 import (
 	"context"
 	"encoding/json" // Utilisé pour la désérialisation du token JSON
+	"errors"
 	"net/http"
 
 	"groom/internal/config"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/oauth2"                       // Utilisé pour gérer OAuth2
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"                // Importer le package meet/v2
 	oauth2api "google.golang.org/api/oauth2/v2" // Renommé pour éviter le conflit
 	"google.golang.org/api/option"
 )
 
 var oauthConfig *oauth2.Config
+
+const GoogleClientKey = "googleClient"
 
 // Initialisation de la configuration OAuth2
 func InitOAuth(cfg config.Config) {
@@ -31,6 +34,29 @@ func InitOAuth(cfg config.Config) {
 		},
 		Endpoint: google.Endpoint,
 	}
+}
+
+// Erreur personnalisée pour l'utilisateur non authentifié
+var ErrUserNotAuthenticated = errors.New("user not authenticated")
+
+// GetGoogleAPIClient récupère le client OAuth2 de l'utilisateur authentifié à partir de la session
+func GetGoogleAPIClient(session sessions.Session) (*http.Client, error) {
+	// Récupérer le token OAuth2 depuis la session
+	tokenJSON := session.Get("token")
+	if tokenJSON == nil {
+		return nil, ErrUserNotAuthenticated
+	}
+
+	// Désérialiser le token JSON en objet oauth2.Token
+	var oauthToken oauth2.Token
+	err := json.Unmarshal(tokenJSON.([]byte), &oauthToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Créer et retourner un client OAuth avec le token désérialisé
+	client := oauthConfig.Client(context.Background(), &oauthToken)
+	return client, nil
 }
 
 // Middleware pour vérifier l'authentification Google
@@ -49,6 +75,16 @@ func RequireLogin() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		client, err := GetGoogleAPIClient(session)
+		if err == ErrUserNotAuthenticated {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google API client", "details": err.Error()})
+			return
+		}
+		c.Set(GoogleClientKey, client)
 
 		c.Next()
 	}
@@ -122,19 +158,6 @@ func LogoutHandler(c *gin.Context) {
 	session.Clear()
 	session.Save()
 	c.Redirect(http.StatusFound, "/")
-}
-
-func BasicAuthMiddleware(username, password string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		user, pass, hasAuth := c.Request.BasicAuth()
-		if !hasAuth || user != username || pass != password {
-			c.Header("WWW-Authenticate", `Basic realm="restricted"`)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			c.Abort()
-			return
-		}
-		c.Next()
-	}
 }
 
 func ApiKeyMiddleware(apiKey string) gin.HandlerFunc {

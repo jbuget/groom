@@ -1,12 +1,14 @@
-# Installation
+# Groom, the Google rooms manager
 
-## Requirements
+## Installation
+
+### Requirements
 
 ```shell
 brew install golang-migrate
 ```
 
-## Steps
+### Steps
 
 Démarrer Postgres via Docker Compose
 
@@ -17,7 +19,7 @@ docker compose up -d
 Configurer l'environnement
 
 ```shell
-export DATABASE_URL=postgres://postgres:password@localhost:5432/ushr?sslmode=disable \
+export DATABASE_URL=postgres://postgres:password@localhost:5432/groom?sslmode=disable \
     BASIC_AUTH_LOGIN=admin \
     BASIC_AUTH_PASSWORD=admin \
     USHR_API_KEY=your_api_key_here
@@ -26,7 +28,7 @@ export DATABASE_URL=postgres://postgres:password@localhost:5432/ushr?sslmode=dis
 Initialiser le projet
 
 ```shell
-go mod init ushr
+go mod init groom
 ```
 
 To add module requirements and sums:
@@ -38,7 +40,7 @@ go mod tidy
 Lancer l'application
 
 ```shell
-go run ./cmd/ushr
+go run ./cmd/groom
 ````
 
 # Usage
@@ -70,7 +72,7 @@ curl -X DELETE http://localhost:3000/api/rooms/1
 ```
 
 
-# How to
+## How to
 
 ### Manually excute migrations
 

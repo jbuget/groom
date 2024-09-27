@@ -1,10 +1,10 @@
 package main
 
 import (
+	"groom/internal/config"
+	"groom/internal/db"
+	"groom/internal/handlers"
 	"log"
-	"ushr/internal/config"
-	"ushr/internal/db"
-	"ushr/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )

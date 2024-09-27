@@ -29,8 +29,8 @@
 /tmp/
 /dist/
 
-# Binaire généré de l'application Ushr
-#ushr
+# Binaire généré de l'application Groom
+#groom
 
 # PostgreSQL
 *.sql

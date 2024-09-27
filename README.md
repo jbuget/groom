@@ -23,6 +23,7 @@ export DATABASE_URL=postgres://postgres:password@localhost:5432/groom?sslmode=di
     BASIC_AUTH_LOGIN=admin \
     BASIC_AUTH_PASSWORD=admin \
     GROOM_API_KEY=your_api_key_here \
+    GOOGLE_API_KEY=<your_google_api_key>
     GOOGLE_CLIENT_ID=<your_google_client_id> \
     GOOGLE_CLIENT_SECRET=<your_google_client_secret> \
     GOOGLE_REDIRECT_URL=http://localhost:3000/auth/callback

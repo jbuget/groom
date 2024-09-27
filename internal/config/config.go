@@ -12,6 +12,7 @@ type Config struct {
     Username    string
     Password    string
     APIKey      string
+	GoogleAPIKey	   string
     GoogleClientID     string
     GoogleClientSecret string
     GoogleRedirectURL  string
@@ -21,6 +22,11 @@ func LoadConfig() Config {
     dbURL := os.Getenv("DATABASE_URL")
     if dbURL == "" {
         log.Fatal("DATABASE_URL is not set")
+    }
+
+    googleAPIKey := os.Getenv("GOOGLE_API_KEY")
+    if googleAPIKey == "" {
+        log.Fatal("GOOGLE_API_KEY is not set")
     }
 
     googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
@@ -45,6 +51,7 @@ func LoadConfig() Config {
         Username:    os.Getenv("BASIC_AUTH_LOGIN"),
         Password:    os.Getenv("BASIC_AUTH_PASSWORD"),
         APIKey:      os.Getenv("GROOM_API_KEY"),
+        GoogleAPIKey:     os.Getenv("GOOGLE_API_KEY"),
         GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
         GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
         GoogleRedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),

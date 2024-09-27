@@ -3,6 +3,7 @@ package main
 import (
 	"groom/internal/config"
 	"groom/internal/db"
+	googleapi "groom/internal/google"
 	"groom/internal/handlers"
 	"log"
 
@@ -28,7 +29,7 @@ func main() {
 	}
 
 	// Initialisation d'OAuth
-	handlers.InitOAuth(cfg)
+	googleapi.InitOAuth(cfg)
 
 	// Création du routeur Gin
 	r := gin.Default()

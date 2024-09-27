@@ -9,9 +9,8 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/oauth2" // Utilisé pour gérer OAuth2
-	"golang.org/x/oauth2/google"
-	meet "google.golang.org/api/meet/v2"        // Importer le package meet/v2
+	"golang.org/x/oauth2"                       // Utilisé pour gérer OAuth2
+	"golang.org/x/oauth2/google"                // Importer le package meet/v2
 	oauth2api "google.golang.org/api/oauth2/v2" // Renommé pour éviter le conflit
 	"google.golang.org/api/option"
 )
@@ -148,55 +147,4 @@ func ApiKeyMiddleware(apiKey string) gin.HandlerFunc {
 		}
 		c.Next()
 	}
-}
-
-// Endpoint pour récupérer les informations d'une Google Meet room
-func GetGoogleMeetRoomInfo(c *gin.Context) {
-	// Récupérer l'ID de la room à partir de l'URL
-	roomId := c.Param("id")
-
-	// Récupérer le token OAuth2 depuis la session
-	session := sessions.Default(c)
-	tokenJSON := session.Get("token")
-	if tokenJSON == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	// Désérialiser le token JSON en objet oauth2.Token
-	var oauthToken oauth2.Token
-	err := json.Unmarshal(tokenJSON.([]byte), &oauthToken)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deserialize token"})
-		return
-	}
-
-	// Créer un client OAuth avec le token désérialisé
-	client := oauthConfig.Client(context.Background(), &oauthToken)
-
-	// Créer un service Google Meet
-	meetService, err := meet.NewService(context.Background(), option.WithHTTPClient(client))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Google Meet service"})
-		return
-	}
-
-	// Appeler l'API Google Meet pour récupérer les informations de la room
-	space, err := meetService.Spaces.Get("spaces/" + roomId).Do()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve room info", "details": err.Error()})
-		return
-	}
-
-	// Vérifier s'il y a une conférence active
-	activeConference := false
-	if space.ActiveConference != nil {
-		activeConference = true
-	}
-
-	// Retourner les informations de la room avec la conférence active (boolean)
-	c.JSON(http.StatusOK, gin.H{
-		"space":            space,            // Toutes les infos sur l'espace
-		"activeConference": activeConference, // Indicateur si une conférence est active ou non
-	})
 }

@@ -51,6 +51,9 @@ func main() {
 	// Route pour rediriger avec un slug
 	r.GET("/:slug", handlers.RequireLogin(), handlers.RedirectHandler(database))
 
+	// Route pour avoir des infos sur une room Google Meet
+	r.GET("/meet/:id", handlers.RequireLogin(), handlers.GetGoogleMeetRoomInfo)
+
 	// Routes API protégées par clé d'API
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{

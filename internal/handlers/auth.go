@@ -28,19 +28,23 @@ func InitOAuth(cfg config.Config) {
 
 // Middleware pour vérifier l'authentification Google
 func RequireLogin() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		user := session.Get("user")
+    return func(c *gin.Context) {
+        session := sessions.Default(c)
+        user := session.Get("user")
 
-		if user == nil {
-			// Redirige vers Google OAuth si l'utilisateur n'est pas connecté
-			c.Redirect(http.StatusFound, "/auth/login")
-			c.Abort()
-			return
-		}
+        if user == nil {
+            // Enregistrer l'URL d'origine dans la session avant de rediriger vers Google OAuth
+            session.Set("redirect", c.Request.RequestURI)
+            session.Save()
 
-		c.Next()
-	}
+            // Rediriger vers la page de connexion OAuth
+            c.Redirect(http.StatusFound, "/auth/login")
+            c.Abort()
+            return
+        }
+
+        c.Next()
+    }
 }
 
 // Redirige vers Google OAuth
@@ -51,38 +55,46 @@ func LoginHandler(c *gin.Context) {
 
 // Callback après authentification Google
 func AuthCallbackHandler(c *gin.Context) {
-	code := c.Query("code")
-	token, err := oauthConfig.Exchange(context.Background(), code)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
-		return
-	}
+    code := c.Query("code")
+    token, err := oauthConfig.Exchange(context.Background(), code)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
+        return
+    }
 
-	client := oauthConfig.Client(context.Background(), token)
-	service, err := oauth2api.New(client)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create OAuth2 service"})
-		return
-	}
+    client := oauthConfig.Client(context.Background(), token)
+    service, err := oauth2api.New(client)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create OAuth2 service"})
+        return
+    }
 
-	userinfo, err := service.Userinfo.Get().Do()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
-		return
-	}
+    userinfo, err := service.Userinfo.Get().Do()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+        return
+    }
 
-	// Vérifier que l'utilisateur est du domaine inclusion.gouv.fr
-	if userinfo.Hd != "inclusion.gouv.fr" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized domain"})
-		return
-	}
+    // Vérifier que l'utilisateur est du domaine inclusion.gouv.fr
+    if userinfo.Hd != "inclusion.gouv.fr" {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized domain"})
+        return
+    }
 
-	// Stocker l'utilisateur dans la session
-	session := sessions.Default(c)
-	session.Set("user", userinfo.Email)
-	session.Save()
+    // Stocker l'utilisateur dans la session
+    session := sessions.Default(c)
+    session.Set("user", userinfo.Email)
+    session.Save()
 
-	c.Redirect(http.StatusFound, "/")
+    // Récupérer l'URL d'origine depuis la session (s'il y en a une)
+    redirect := session.Get("redirect")
+    if redirect != nil {
+        session.Delete("redirect")  // Nettoyer l'URL après redirection
+        session.Save()
+        c.Redirect(http.StatusFound, redirect.(string))
+    } else {
+        c.Redirect(http.StatusFound, "/")  // Rediriger vers la page d'accueil par défaut
+    }
 }
 
 // Déconnexion

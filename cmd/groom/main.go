@@ -49,7 +49,7 @@ func main() {
     r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(database))
 
 	// Route pour rediriger avec un slug
-	r.GET("/:slug", handlers.RedirectHandler(database))
+	r.GET("/:slug", handlers.RequireLogin(), handlers.RedirectHandler(database))
 
 	// Routes API protégées par clé d'API
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))

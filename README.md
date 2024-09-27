@@ -22,7 +22,10 @@ Configurer l'environnement
 export DATABASE_URL=postgres://postgres:password@localhost:5432/groom?sslmode=disable \
     BASIC_AUTH_LOGIN=admin \
     BASIC_AUTH_PASSWORD=admin \
-    USHR_API_KEY=your_api_key_here
+    GROOM_API_KEY=your_api_key_here \
+    GOOGLE_CLIENT_ID=<your_google_client_id> \
+    GOOGLE_CLIENT_SECRET=<your_google_client_secret> \
+    GOOGLE_REDIRECT_URL=http://localhost:3000/auth/callback
 ```
 
 Initialiser le projet
@@ -62,10 +65,10 @@ http://localhost:3000/ma-room
 curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
 
 # Ajouter une room
-curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
+curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "meet_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Modifiez une room existante
-curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "meet_id":"xxx-yyyy-zzzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
+curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "meet_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Supprimez une room
 curl -X DELETE http://localhost:3000/api/rooms/1

@@ -24,7 +24,7 @@ func main() {
 	defer database.Close()
 
 	// Appliquer les migrations au démarrage
-	if err := db.RunMigrations(database, "./migrations"); err != nil {
+	if err := db.RunMigrations(database, cfg.DatabaseMigrationPath); err != nil {
 		log.Fatalf("Could not run migrations: %v\n", err)
 	}
 

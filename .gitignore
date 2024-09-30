@@ -32,7 +32,4 @@
 # Binaire généré de l'application Groom
 #groom
 
-# PostgreSQL
-*.sql
-
 postgres-data/

@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liste des Salles</title>
+    <title>Liste des salles</title>
     <style>
+        html {
+            background: #f4f4f4;
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 40px;
@@ -15,35 +18,66 @@
         ul {
             list-style-type: none;
             padding: 0;
-        }
-        li {
-            margin: 10px 0;
+            margin: 0;
         }
         a {
             text-decoration: none;
             color: #007BFF;
         }
-        a:hover {
-            text-decoration: underline;
+        a,
+        a:active,
+        a:hover,
+        a:focus {
+            text-decoration: none;
         }
-        .room-slug {
+        .room-list {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+            padding: 16px 0;
+            max-width: 800px;
+            padding: 15px 0;
+        }
+        .room-item {
+            margin: 5px 15px;
+            border-radius: 5px;
+        }
+        .room-item:hover,
+        .room-item:focus,
+        .room-item:active {
+            background: #f4f4f4;
+        }
+        .room-item__link {
+            padding: 7px;
+            display: block;
+        }
+        .room-item__slug {
             font-weight: bold;
+            color: #000;
+            display: block;
+        }
+        .room-item__space {
+            color: #aaa;
         }
     </style>
 </head>
 <body>
     <h1>Liste des Salles</h1>
-    <ul>
-        {{ range .rooms }}
-        <li>
-            <span class="room-slug">{{ .Slug }}</span>: 
-            <a href="https://meet.google.com/{{ .SpaceID }}" target="_blank">
-                https://meet.google.com/{{ .SpaceID }}
-            </a>
-        </li>
-        {{ else }}
-        <li>Aucune salle définie</li>
-        {{ end }}
-    </ul>
+    <div class="room-list">
+        <ul>
+            {{ range .rooms }}
+            <li>
+                <div class="room-item">
+                    <a class="room-item__link" href="https://meet.google.com/{{ .SpaceID }}" target="_blank">
+                        <span class="room-item__slug">/{{ .Slug }}</span>
+                        <span class="room-item__space">{{ .SpaceID }}</span>
+                    </a>
+                </div>
+            </li>
+            {{ else }}
+            <li>Aucune salle définie</li>
+            {{ end }}
+        </ul>
+    </div>
 </body>
 </html>

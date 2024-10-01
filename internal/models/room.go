@@ -13,7 +13,7 @@ type Room struct {
 // Fonction pour récupérer toutes les rooms
 func GetAllRooms(db *sql.DB) ([]Room, error) {
 	var rooms []Room
-	rows, err := db.Query("SELECT id, slug, space_id FROM rooms")
+	rows, err := db.Query("SELECT id, slug, space_id FROM rooms ORDER BY slug ASC")
 	if err != nil {
 		return nil, err
 	}

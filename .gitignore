@@ -23,6 +23,7 @@
 *.idea/
 .vscode/
 .history/
+__debug_*
 
 # Cache et artefacts
 /.cache/

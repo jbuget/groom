@@ -12,14 +12,14 @@ import (
 func RedirectHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		slug := c.Param("slug")
-		meetID, err := models.GetMeetIDFromSlug(db, slug)
+		spaceID, err := models.GetSpaceIDFromSlug(db, slug)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
 			return
 		}
 
 		// Rediriger vers la room Google Meet correspondante
-		c.Redirect(http.StatusFound, "https://meet.google.com/"+meetID)
+		c.Redirect(http.StatusFound, "https://meet.google.com/"+spaceID)
 	}
 }
 

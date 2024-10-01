@@ -66,10 +66,10 @@ http://localhost:3000/ma-room
 curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
 
 # Ajouter une room
-curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "meet_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
+curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "space_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Modifiez une room existante
-curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "meet_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
+curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "space_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Supprimez une room
 curl -X DELETE http://localhost:3000/api/rooms/1

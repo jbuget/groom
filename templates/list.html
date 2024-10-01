@@ -37,8 +37,8 @@
         {{ range .rooms }}
         <li>
             <span class="room-slug">{{ .Slug }}</span>: 
-            <a href="https://meet.google.com/{{ .MeetID }}" target="_blank">
-                https://meet.google.com/{{ .MeetID }}
+            <a href="https://meet.google.com/{{ .SpaceID }}" target="_blank">
+                https://meet.google.com/{{ .SpaceID }}
             </a>
         </li>
         {{ else }}

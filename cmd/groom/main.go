@@ -51,7 +51,7 @@ func main() {
 	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(database))
 
 	// Route pour rediriger avec un slug
-	r.GET("/:slug", handlers.RequireLogin(), handlers.RedirectHandler(database))
+	r.GET("/:slug", handlers.RedirectHandler(database))
 
 	// Route pour avoir des infos sur une room Google Meet
 	r.GET("/spaces/:name", handlers.RequireLogin(), handlers.GoogleMeetRoomHandler)

@@ -9,12 +9,12 @@
             background: #f4f4f4;
         }
         body {
-            font-family: Arial, sans-serif;
+            font-family: system-ui, sans-serif;
             margin: 40px;
         }
         h1 {
             color: #333;
-            width: 800px;
+            align-self: flex-start;
         }
         ul {
             list-style-type: none;
@@ -31,20 +31,20 @@
         a:focus {
             text-decoration: none;
         }
-        .centered {
+        main {
             display: flex;
             flex-direction: column;
-            justify-content: top;
+            justify-content: flex-start;
             align-items: center;
-            height: 100vh;
+            max-width: 50rem;
+            margin: 0 auto 3rem;
         }
         .room-list {
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.16);
             padding: 16px 0;
-            width: 800px;
-            padding: 15px 0;
+            width: 100%;
         }
         .room-item {
             margin: 5px 15px;
@@ -70,8 +70,8 @@
     </style>
 </head>
 <body>
-    <div class="centered">
         <h1>Liste des Salles</h1>
+    <main>
         <div class="room-list">
             <ul>
                 {{ range .rooms }}
@@ -88,6 +88,6 @@
                 {{ end }}
             </ul>
         </div>
-    </div>
+    </main>
 </body>
 </html>

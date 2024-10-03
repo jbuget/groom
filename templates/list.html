@@ -77,9 +77,9 @@
                 {{ range .rooms }}
                 <li>
                     <div class="room-item">
-                        <a class="room-item__link" href="https://meet.google.com/{{ .SpaceID }}" target="_blank">
+                        <a class="room-item__link" href="https://meet.inclusion.gouv.fr/{{ .Slug }}" target="_blank">
                             <span class="room-item__slug">{{ .Slug }}</span>
-                            <span class="room-item__space">{{ .SpaceID }}</span>
+                            <span class="room-item__space">https://meet.google.com/{{ .SpaceID }}</span>
                         </a>
                     </div>
                 </li>

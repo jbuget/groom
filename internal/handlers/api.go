@@ -5,6 +5,7 @@ import (
 	"groom/internal/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/meet/v2"
@@ -43,15 +44,8 @@ func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 			return
 		}
 
-		space, err := meetService.Spaces.Create(&meet.Space{}).Do()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
-			return
-		}
-
 		room := models.Room{
 			Slug:    requestBody.Slug,
-			SpaceID: space.MeetingCode,
 		}
 
 		createdRoom, err := models.CreateRoom(db, room)
@@ -64,9 +58,9 @@ func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 	}
 }
 
-// Handler pour mettre à jour une room
 func UpdateRoomHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Get and check query param ID
 		idStr := c.Param("id")
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
@@ -74,19 +68,38 @@ func UpdateRoomHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		var room models.Room
-		if err := c.BindJSON(&room); err != nil {
+		room, err := models.GetRoomByID(db, id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error querying for room"})
+			return
+		}
+		if room == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
+			return
+		}
+
+		// Get and check body params
+		var requestBody struct {
+			Slug string `json:"slug"`
+			SpaceID string `json:"space_id"`
+		}
+		if err := c.BindJSON(&requestBody); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 			return
 		}
 
-		// Mettre à jour la room dans la base de données
-		err = models.UpdateRoom(db, id, room)
+		// Update room
+		room.Slug = requestBody.Slug
+		room.SpaceID = requestBody.SpaceID
+		room.UpdatedAt = time.Now()
+
+		err = models.UpdateRoom(db, *room)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating room"})
 			return
 		}
 
+		// Return
 		c.JSON(http.StatusOK, gin.H{"message": "Room updated successfully"})
 	}
 }

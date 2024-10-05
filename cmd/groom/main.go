@@ -45,7 +45,7 @@ func main() {
 
 	// Open routes
 	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
-	r.GET("/:slug", handlers.RedirectHandler(db.Database))
+	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
 
 	// Protected routes (by "X-API-TOKEN" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))

@@ -13,6 +13,21 @@ type Room struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+func GetRoomByID(db *sql.DB, id int) (*Room, error) {
+	row := db.QueryRow("SELECT id, slug, space_id, created_at, updated_at FROM rooms WHERE id = $1", id)
+
+	var room Room
+
+	err := row.Scan(&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &room, nil
+}
+
 func GetRoomBySlug(db *sql.DB, slug string) (*Room, error) {
 	row := db.QueryRow("SELECT id, slug, space_id, created_at, updated_at FROM rooms WHERE slug = $1", slug)
 
@@ -62,12 +77,12 @@ func CreateRoom(db *sql.DB, room Room) (*Room, error) {
 	return &room, nil
 }
 
-func UpdateRoom(db *sql.DB, id int, room Room) error {
+func UpdateRoom(db *sql.DB, room Room) error {
 	query := `
 		UPDATE rooms 
 		SET slug = $1, space_id = $2, updated_at = $3 
 		WHERE id = $4`
-	_, err := db.Exec(query, room.Slug, room.SpaceID, time.Now(), id)
+	_, err := db.Exec(query, room.Slug, room.SpaceID, time.Now(), room.ID)
 	return err
 }
 

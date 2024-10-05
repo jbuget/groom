@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"groom/internal/models"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/api/meet/v2"
 )
-
 
 // GET /
 func ListRoomsHTMLHandler(db *sql.DB) gin.HandlerFunc {
@@ -26,16 +27,34 @@ func ListRoomsHTMLHandler(db *sql.DB) gin.HandlerFunc {
 }
 
 // GET /:slug
-func RedirectHandler(db *sql.DB) gin.HandlerFunc {
+func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		slug := c.Param("slug")
-		spaceID, err := models.GetSpaceIDFromSlug(db, slug)
+
+		room, err := models.GetRoomBySlug(db, slug)
 		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error verifying room existence"})
+			return
+		}
+		if room == nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
 			return
 		}
 
+		if room.SpaceID == "" {
+			space, err := meetService.Spaces.Create(&meet.Space{}).Do()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
+				return
+			}
+			room.SpaceID = space.MeetingCode
+			room.UpdatedAt = time.Now()
+			models.UpdateRoom(db, *room)
+		}
+
+		// TODO check GMeet space validity
+
 		// Rediriger vers la room Google Meet correspondante
-		c.Redirect(http.StatusFound, "https://meet.google.com/"+spaceID)
+		c.Redirect(http.StatusFound, "https://meet.google.com/"+room.SpaceID)
 	}
 }

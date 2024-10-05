@@ -43,16 +43,11 @@ func main() {
 	r.GET("/auth/callback", handlers.AuthCallbackHandler)
 	r.GET("/auth/logout", handlers.LogoutHandler)
 
-	// Protection des routes par OAuth
+	// Open routes
 	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
-
-	// Route pour rediriger avec un slug
 	r.GET("/:slug", handlers.RedirectHandler(db.Database))
 
-	// Route pour avoir des infos sur une room Google Meet
-	r.GET("/spaces/:name", handlers.RequireLogin(), handlers.GoogleMeetRoomHandler(googleapi.MeetService))
-
-	// Routes API protégées par clé d'API
+	// Protected routes (by "X-API-TOKEN" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
 		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))

@@ -49,6 +49,9 @@
         .room-item {
             margin: 5px 15px;
             border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .room-item:hover,
         .room-item:focus,
@@ -57,7 +60,9 @@
         }
         .room-item__link {
             padding: 7px;
-            display: block;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
         }
         .room-item__slug {
             font-weight: bold;
@@ -66,6 +71,28 @@
         }
         .room-item__space {
             color: #aaa;
+            display: block;
+            font-size: 0.80rem;
+        }
+
+        .room-item__actions {
+            padding: 0 10px;
+        }
+
+        .room-item__copy-link-btn {
+            border: 1px solid transparent;
+            background: #f4f4f4;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 10px;
+            width: 2rem;
+            height: 2rem;
+        }
+        .room-item__copy-link-btn:hover,
+        .room-item__copy-link-btn:focus,
+        .room-item__copy-link-btn:active {
+            border-color: black;
         }
     </style>
 </head>
@@ -77,10 +104,13 @@
                 {{ range .rooms }}
                 <li>
                     <div class="room-item">
-                        <a class="room-item__link" href="/{{ .Slug }}" target="_blank">
+                        <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
                             <span class="room-item__slug">{{ .Slug }}</span>
                             <span class="room-item__space">https://meet.google.com/{{ .SpaceID }}</span>
                         </a>
+                        <div class="room-item__actions">
+                            <button class="room-item__copy-link-btn" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">🔗</button>
+                        </div>
                     </div>
                 </li>
                 {{ else }}
@@ -89,5 +119,12 @@
             </ul>
         </div>
     </main>
+    <script>
+        function copyToClipboard(event, slug) {
+            event.preventDefault();
+            const link = `${window.location.origin}/${slug}`;
+            navigator.clipboard.writeText(link);
+        }
+    </script>
 </body>
 </html>

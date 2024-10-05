@@ -8,6 +8,9 @@
 brew install golang-migrate
 ```
 
+Générer des identifiants de type "compte de service" depuis la console Google Cloud.
+Récupérer le fichier de credentials, `account_service.json`, à mettre à la racine.
+
 ### Steps
 
 Démarrer Postgres via Docker Compose
@@ -20,8 +23,6 @@ Configurer l'environnement
 
 ```shell
 export DATABASE_URL=postgres://postgres:password@localhost:5432/groom?sslmode=disable \
-    BASIC_AUTH_LOGIN=admin \
-    BASIC_AUTH_PASSWORD=admin \
     GROOM_API_KEY=your_api_key_here \
     GOOGLE_API_KEY=<your_google_api_key>
     GOOGLE_CLIENT_ID=<your_google_client_id> \
@@ -66,7 +67,7 @@ http://localhost:3000/ma-room
 curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
 
 # Ajouter une room
-curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle", "space_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
+curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Modifiez une room existante
 curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "space_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 

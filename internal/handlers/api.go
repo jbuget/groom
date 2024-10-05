@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/api/meet/v2"
 )
 
 // Handler pour lister les rooms en JSON
@@ -22,22 +23,43 @@ func ListRoomsJSONHandler(db *sql.DB) gin.HandlerFunc {
 }
 
 // Handler pour créer une room
-func CreateRoomHandler(db *sql.DB) gin.HandlerFunc {
+func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var room models.Room
-		if err := c.BindJSON(&room); err != nil {
+		var requestBody struct {
+			Slug string `json:"slug"`
+		}
+		if err := c.BindJSON(&requestBody); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 			return
 		}
 
-		// Créer la room dans la base de données
+		existingRoom, err := models.GetRoomBySlug(db, requestBody.Slug)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error verifying room existence"})
+			return
+		}
+		if existingRoom != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "A room with the same slug already exists"})
+			return
+		}
+
+		space, err := meetService.Spaces.Create(&meet.Space{}).Do()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
+			return
+		}
+
+		room := models.Room{
+			Slug:    requestBody.Slug,
+			SpaceID: space.MeetingCode,
+		}
+
 		id, err := models.CreateRoom(db, room)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting room"})
 			return
 		}
 
-		// Retourner la room créée avec son ID
 		room.ID = id
 		c.JSON(http.StatusCreated, room)
 	}

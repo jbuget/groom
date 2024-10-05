@@ -56,7 +56,7 @@ func main() {
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
 		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))
-		api.POST("/rooms", handlers.CreateRoomHandler(db.Database))
+		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
 	}

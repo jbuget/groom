@@ -40,7 +40,7 @@ func main() {
 
 	// Routes pour l'authentification Google
 	r.GET("/auth/login", handlers.LoginHandler)
-	r.GET("/auth/callback", handlers.AuthCallbackHandler)
+	r.GET("/auth/callback", handlers.AuthCallbackHandler(cfg.GoogleWorkspaceDomain))
 	r.GET("/auth/logout", handlers.LogoutHandler)
 
 	// Open routes

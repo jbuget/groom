@@ -22,12 +22,15 @@ docker compose up -d
 Configurer l'environnement
 
 ```shell
-export DATABASE_URL=postgres://postgres:password@localhost:5432/groom?sslmode=disable \
-    GROOM_API_KEY=your_api_key_here \
-    GOOGLE_API_KEY=<your_google_api_key>
-    GOOGLE_CLIENT_ID=<your_google_client_id> \
-    GOOGLE_CLIENT_SECRET=<your_google_client_secret> \
-    GOOGLE_REDIRECT_URL=http://localhost:3000/auth/callback
+export DATABASE_URL="postgres://postgres:password@localhost:5432/groom?sslmode=disable"
+export GROOM_API_KEY="your_api_key_here"
+export GOOGLE_API_KEY="<your_google_api_key>"
+export GOOGLE_CLIENT_ID="<your_google_client_id>"
+export GOOGLE_CLIENT_SECRET="<your_google_client_secret>"
+export GOOGLE_REDIRECT_URL="https://example.test/auth/callback"
+export GOOGLE_WORKSPACE_DOMAIN="example.test"
+export GOOGLE_SERVICE_ACCOUNT_IMPERSONATED_USER="service-account@example.test"
+export GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_FILE="./service_account.json"
 ```
 
 Initialiser le projet
@@ -73,7 +76,7 @@ curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle"}' -H "
 curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "space_id":"xxx-yyyy-zzz"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
 # Supprimez une room
-curl -X DELETE http://localhost:3000/api/rooms/1
+curl -X DELETE http://localhost:3000/api/rooms/1 -H "X-API-KEY: your_api_key_here" 
 ```
 
 

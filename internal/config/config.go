@@ -6,23 +6,31 @@ import (
 )
 
 type Config struct {
-	Host                  string
-	Port                  string
-	DatabaseURL           string
-	DatabaseMigrationPath string
-	Username              string
-	Password              string
-	APIKey                string
-	GoogleAPIKey          string
-	GoogleClientID        string
-	GoogleClientSecret    string
-	GoogleRedirectURL     string
+	Host                                 string
+	Port                                 string
+	DatabaseURL                          string
+	DatabaseMigrationPath                string
+	Username                             string
+	Password                             string
+	APIKey                               string
+	GoogleWorkspaceDomain                string
+	GoogleAPIKey                         string
+	GoogleClientID                       string
+	GoogleClientSecret                   string
+	GoogleRedirectURL                    string
+	GoogleServiceAccountCredentialsFile  string
+	GoogleServiceAccountImpersonatedUser string // email
 }
 
 func LoadConfig() Config {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL is not set")
+	}
+
+	googleWorkspaceDomain := os.Getenv("GOOGLE_WORKSPACE_DOMAIN")
+	if googleWorkspaceDomain == "" {
+		log.Fatal("GOOGLE_WORKSPACE_DOMAIN is not set")
 	}
 
 	googleAPIKey := os.Getenv("GOOGLE_API_KEY")
@@ -45,16 +53,24 @@ func LoadConfig() Config {
 		log.Fatal("GOOGLE_REDIRECT_URL is not set")
 	}
 
+	googleServiceAccountImpersonatedUser := os.Getenv("GOOGLE_SERVICE_ACCOUNT_IMPERSONATED_USER")
+	if googleServiceAccountImpersonatedUser == "" {
+		log.Fatal("GOOGLE_SERVICE_ACCOUNT_IMPERSONATED_USER is not set")
+	}
+
 	return Config{
-		Host:                  getEnv("HOST", "0.0.0.0"),
-		Port:                  getEnv("PORT", "3000"),
-		DatabaseURL:           os.Getenv("DATABASE_URL"),
-		DatabaseMigrationPath: getEnv("DATABASE_MIGRATION_PATH", "./migrations"),
-		APIKey:                os.Getenv("GROOM_API_KEY"),
-		GoogleAPIKey:          os.Getenv("GOOGLE_API_KEY"),
-		GoogleClientID:        os.Getenv("GOOGLE_CLIENT_ID"),
-		GoogleClientSecret:    os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GoogleRedirectURL:     os.Getenv("GOOGLE_REDIRECT_URL"),
+		Host:                                 getEnv("HOST", "0.0.0.0"),
+		Port:                                 getEnv("PORT", "3000"),
+		DatabaseURL:                          os.Getenv("DATABASE_URL"),
+		DatabaseMigrationPath:                getEnv("DATABASE_MIGRATION_PATH", "./migrations"),
+		APIKey:                               os.Getenv("GROOM_API_KEY"),
+		GoogleWorkspaceDomain:                os.Getenv("GOOGLE_WORKSPACE_DOMAIN"),
+		GoogleAPIKey:                         os.Getenv("GOOGLE_API_KEY"),
+		GoogleClientID:                       os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret:                   os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleRedirectURL:                    os.Getenv("GOOGLE_REDIRECT_URL"),
+		GoogleServiceAccountCredentialsFile:  getEnv("GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_FILE", "./service_account.json"),
+		GoogleServiceAccountImpersonatedUser: os.Getenv("GOOGLE_SERVICE_ACCOUNT_IMPERSONATED_USER"),
 	}
 }
 

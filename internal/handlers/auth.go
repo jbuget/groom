@@ -72,58 +72,60 @@ func LoginHandler(c *gin.Context) {
 }
 
 // Callback après authentification Google
-func AuthCallbackHandler(c *gin.Context) {
-	code := c.Query("code")
-	token, err := googleapi.UserOAuthConfig.Exchange(context.Background(), code)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
-		return
-	}
+func AuthCallbackHandler(googleWorkspaceDomain string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		code := c.Query("code")
+		token, err := googleapi.UserOAuthConfig.Exchange(context.Background(), code)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
+			return
+		}
 
-	// Créer un client avec le token OAuth
-	client := googleapi.UserOAuthConfig.Client(context.Background(), token)
+		// Créer un client avec le token OAuth
+		client := googleapi.UserOAuthConfig.Client(context.Background(), token)
 
-	// Utiliser oauth2api.NewService pour initialiser le service OAuth2
-	oauth2Service, err := oauth2api.NewService(context.Background(), option.WithHTTPClient(client))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create OAuth2 service"})
-		return
-	}
+		// Utiliser oauth2api.NewService pour initialiser le service OAuth2
+		oauth2Service, err := oauth2api.NewService(context.Background(), option.WithHTTPClient(client))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create OAuth2 service"})
+			return
+		}
 
-	// Récupérer les informations utilisateur via l'API Google OAuth2
-	userinfo, err := oauth2Service.Userinfo.Get().Do()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
-		return
-	}
+		// Récupérer les informations utilisateur via l'API Google OAuth2
+		userinfo, err := oauth2Service.Userinfo.Get().Do()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info"})
+			return
+		}
 
-	// Vérifier que l'utilisateur est du domaine inclusion.gouv.fr
-	if userinfo.Hd != "inclusion.gouv.fr" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized domain"})
-		return
-	}
+		// Vérifier que l'utilisateur est du domaine inclusion.gouv.fr
+		if userinfo.Hd != googleWorkspaceDomain {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized domain"})
+			return
+		}
 
-	// Sérialiser le token en JSON pour le stocker dans la session
-	tokenJSON, err := json.Marshal(token)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize token"})
-		return
-	}
+		// Sérialiser le token en JSON pour le stocker dans la session
+		tokenJSON, err := json.Marshal(token)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize token"})
+			return
+		}
 
-	// Stocker l'utilisateur et le token sérialisé dans la session
-	session := sessions.Default(c)
-	session.Set("user", userinfo.Email)
-	session.Set("token", tokenJSON) // Stocker le token OAuth2 au format JSON
-	session.Save()
-
-	// Rediriger l'utilisateur vers l'URL qu'il voulait initialement accéder
-	redirect := session.Get("redirect")
-	if redirect != nil {
-		session.Delete("redirect")
+		// Stocker l'utilisateur et le token sérialisé dans la session
+		session := sessions.Default(c)
+		session.Set("user", userinfo.Email)
+		session.Set("token", tokenJSON) // Stocker le token OAuth2 au format JSON
 		session.Save()
-		c.Redirect(http.StatusFound, redirect.(string))
-	} else {
-		c.Redirect(http.StatusFound, "/")
+
+		// Rediriger l'utilisateur vers l'URL qu'il voulait initialement accéder
+		redirect := session.Get("redirect")
+		if redirect != nil {
+			session.Delete("redirect")
+			session.Save()
+			c.Redirect(http.StatusFound, redirect.(string))
+		} else {
+			c.Redirect(http.StatusFound, "/")
+		}
 	}
 }
 

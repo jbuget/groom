@@ -52,7 +52,7 @@ func InitServiceAccountServices(cfg config.Config) {
 	}
 
 	// Spécifiez l'utilisateur à impersonner (un utilisateur du domaine Google Workspace)
-	impersonatedUser := "collectif@inclusion.gouv.fr" // L'utilisateur que vous voulez impersonner
+	impersonatedUser := cfg.GoogleServiceAccountImpersonatedUser // L'utilisateur que vous voulez impersonner
 
 	// Configurer le compte de service pour agir en tant qu'utilisateur avec délégation
 	ServiceAccountOAuthConfig := &jwt.Config{

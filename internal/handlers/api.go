@@ -54,14 +54,13 @@ func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 			SpaceID: space.MeetingCode,
 		}
 
-		id, err := models.CreateRoom(db, room)
+		createdRoom, err := models.CreateRoom(db, room)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting room"})
 			return
 		}
 
-		room.ID = id
-		c.JSON(http.StatusCreated, room)
+		c.JSON(http.StatusCreated, createdRoom)
 	}
 }
 

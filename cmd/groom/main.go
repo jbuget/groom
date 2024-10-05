@@ -16,21 +16,17 @@ func main() {
 	// Charger la configuration
 	cfg := config.LoadConfig()
 
-	// Connexion à la base de données
-	database, err := db.Connect(cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-	defer database.Close()
-
-	// Appliquer les migrations au démarrage
-	log.Print("\n\nMigration file → " + cfg.DatabaseMigrationPath + "\n\n")
-	if err := db.RunMigrations(database, cfg.DatabaseMigrationPath); err != nil {
+	// Initialisation de la base de donées et exécution automatique des migrations
+	db.InitDatabase(cfg.DatabaseURL)
+	databaseName := "postgres"
+	if err := db.RunMigrations(cfg.DatabaseMigrationPath, databaseName); err != nil {
 		log.Fatalf("Could not run migrations: %v\n", err)
 	}
+	defer db.Database.Close()
 
-	// Initialisation d'OAuth
-	googleapi.InitOAuth(cfg)
+	// Initialisation des composants Google (OAuth utilisateur ou compte de services, clients d'APIs, etc.)
+	googleapi.InitUserOAuth(cfg)
+	googleapi.InitServiceAccountServices(cfg)
 
 	// Création du routeur Gin
 	r := gin.Default()
@@ -48,21 +44,21 @@ func main() {
 	r.GET("/auth/logout", handlers.LogoutHandler)
 
 	// Protection des routes par OAuth
-	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(database))
+	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
 
 	// Route pour rediriger avec un slug
-	r.GET("/:slug", handlers.RedirectHandler(database))
+	r.GET("/:slug", handlers.RedirectHandler(db.Database))
 
 	// Route pour avoir des infos sur une room Google Meet
-	r.GET("/spaces/:name", handlers.RequireLogin(), handlers.GoogleMeetRoomHandler)
+	r.GET("/spaces/:name", handlers.RequireLogin(), handlers.GoogleMeetRoomHandler(googleapi.MeetService))
 
 	// Routes API protégées par clé d'API
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
-		api.GET("/rooms", handlers.ListRoomsJSONHandler(database))
-		api.POST("/rooms", handlers.CreateRoomHandler(database))
-		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(database))
-		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(database))
+		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))
+		api.POST("/rooms", handlers.CreateRoomHandler(db.Database))
+		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
+		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
 	}
 
 	// Démarrer le serveur

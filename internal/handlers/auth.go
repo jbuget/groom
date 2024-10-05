@@ -52,7 +52,8 @@ func RequireLogin() gin.HandlerFunc {
 			return
 		}
 
-		client, err := googleapi.GetGoogleAPIClientFromOAuth2Token(&oauthToken)
+		client := googleapi.UserOAuthConfig.Client(context.Background(), &oauthToken)
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google API client", "details": err.Error()})
 			return
@@ -66,21 +67,21 @@ func RequireLogin() gin.HandlerFunc {
 
 // Redirige vers Google OAuth
 func LoginHandler(c *gin.Context) {
-	url := googleapi.OAuthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	url := googleapi.UserOAuthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	c.Redirect(http.StatusFound, url)
 }
 
 // Callback après authentification Google
 func AuthCallbackHandler(c *gin.Context) {
 	code := c.Query("code")
-	token, err := googleapi.OAuthConfig.Exchange(context.Background(), code)
+	token, err := googleapi.UserOAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
 		return
 	}
 
 	// Créer un client avec le token OAuth
-	client := googleapi.OAuthConfig.Client(context.Background(), token)
+	client := googleapi.UserOAuthConfig.Client(context.Background(), token)
 
 	// Utiliser oauth2api.NewService pour initialiser le service OAuth2
 	oauth2Service, err := oauth2api.NewService(context.Background(), option.WithHTTPClient(client))

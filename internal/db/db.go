@@ -1,38 +1,48 @@
 package db
 
 import (
-    "database/sql"
-    "log"
-    "github.com/golang-migrate/migrate/v4"
-    "github.com/golang-migrate/migrate/v4/database/postgres"
-    _ "github.com/golang-migrate/migrate/v4/source/file"
-    _ "github.com/jackc/pgx/v4/stdlib"
+	"database/sql"
+	"log"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-// Fonction pour exécuter les migrations
-func RunMigrations(db *sql.DB, migrationsPath string) error {
-    driver, err := postgres.WithInstance(db, &postgres.Config{})
-    if err != nil {
-        return err
-    }
+var Database *sql.DB
 
-    m, err := migrate.NewWithDatabaseInstance(
-        "file://"+migrationsPath, // chemin vers les fichiers de migration
-        "postgres",               // nom de la base de données
-        driver,
-    )
-    if err != nil {
-        return err
-    }
+func InitDatabase(datasourceName string) {
+	database, err := sql.Open("pgx", datasourceName)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+	Database = database
+}
 
-    if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-        return err
-    }
+func RunMigrations(migrationsPath string, databaseName string) error {
+	driver, err := postgres.WithInstance(Database, &postgres.Config{})
+	if err != nil {
+		return err
+	}
 
-    log.Println("Migrations applied successfully")
-    return nil
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://"+migrationsPath,
+		databaseName,
+		driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	log.Println("Migrations applied successfully")
+	return nil
 }
 
 func Connect(databaseURL string) (*sql.DB, error) {
-    return sql.Open("pgx", databaseURL)
+	return sql.Open("pgx", databaseURL)
 }

@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	googleapi "groom/internal/google"
 	"groom/internal/models"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/api/meet/v2"
 )
 
 // Handler pour lister les rooms en JSON
@@ -24,7 +24,7 @@ func ListRoomsJSONHandler(db *sql.DB) gin.HandlerFunc {
 }
 
 // Handler pour créer une room
-func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
+func CreateRoomHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var requestBody struct {
 			Slug string `json:"slug"`
@@ -44,7 +44,7 @@ func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 			return
 		}
 
-		space, err := meetService.Spaces.Create(&meet.Space{}).Do()
+		space, err := meetService.CreateSpace()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
 			return

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	googleapi "groom/internal/google"
 	"groom/internal/models"
 	"net/http"
 	"strings"
@@ -21,7 +22,7 @@ func isRoomOccupied(spaceID string, activeConferences []*meet.ConferenceRecord) 
 }
 
 // GET /
-func ListRoomsHTMLHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
+func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rooms, err := models.GetAllRooms(db)
 		if err != nil {
@@ -29,15 +30,11 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc
 			return
 		}
 
-		activeConferences, err := meetService.ConferenceRecords.List().Filter("end_time IS NULL").Do()
+		activeConferences, err := meetService.ListActiveConferences()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "unhealthy",
-				"error":  "Google Meet service unavailable",
-			})
+			c.String(http.StatusInternalServerError, "Unable to retrieve active conferences")
 			return
 		}
-
 
 		// RoomView est un type dérivé qui contient les informations nécessaires pour l'affichage
 		type RoomView struct {
@@ -56,7 +53,7 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc
 				Slug:    room.Slug,
 				SpaceID: room.SpaceID,
 				// Ajouter la propriété IsOccupied en fonction des conférences actives
-				IsOccupied: isRoomOccupied(room.SpaceID, activeConferences.ConferenceRecords),
+				IsOccupied: isRoomOccupied(room.SpaceID, activeConferences),
 			}
 
 			// Ajouter RoomView à la liste
@@ -71,7 +68,7 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc
 }
 
 // GET /:slug
-func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
+func RedirectHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		slug := c.Param("slug")
 
@@ -89,7 +86,7 @@ func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 
 		// Si le SpaceID commence par "spaces/", on doit récupérer le Space via meetService
 		if strings.HasPrefix(room.SpaceID, "spaces/") {
-			space, err := meetService.Spaces.Get(room.SpaceID).Do()
+			space, err := meetService.GetSpace(room.SpaceID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google Meet space", "details": err.Error()})
 				return
@@ -113,7 +110,7 @@ func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 }
 
 // GET /healthz
-func HealthzHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
+func HealthzHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Vérifier la connexion à la base de données
 		err := db.Ping()
@@ -126,7 +123,7 @@ func HealthzHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 		}
 
 		// Vérifier l'accès à l'API Google Meet
-		_, err = meetService.ConferenceRecords.List().Do()
+		err = meetService.CheckMeetClient()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status": "unhealthy",

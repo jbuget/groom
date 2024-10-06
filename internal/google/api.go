@@ -16,7 +16,12 @@ import (
 
 var UserOAuthConfig *oauth2.Config
 var ServiceAccountOAuthConfig *jwt.Config
-var MeetService *meet.Service
+
+type MeetClient struct {
+	service *meet.Service
+}
+
+var MeetService *MeetClient
 
 func InitUserOAuth(cfg config.Config) {
 	UserOAuthConfig = &oauth2.Config{
@@ -67,9 +72,46 @@ func InitServiceAccountServices(cfg config.Config) {
 	}
 	client := ServiceAccountOAuthConfig.Client(context.Background())
 
-	MeetService, err = meet.NewService(ctx, option.WithHTTPClient(client))
+	meetService, err := meet.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Unable to retrieve Calendar client: %v", err)
 	}
 
+	// Initialisation du MeetClient exporté
+	MeetService = &MeetClient{
+		service: meetService,
+	}
+
+}
+
+func (mc *MeetClient) CheckMeetClient() error {
+	_, err := mc.service.ConferenceRecords.List().Do()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mc *MeetClient) GetSpace(spaceID string) (*meet.Space, error) {
+	space, err := mc.service.Spaces.Get(spaceID).Do()
+	if err != nil {
+		return nil, err
+	}
+	return space, nil
+}
+
+func (mc *MeetClient) CreateSpace() (*meet.Space, error) {
+	space, err := mc.service.Spaces.Create(&meet.Space{}).Do()
+	if err != nil {
+		return nil, err
+	}
+	return space, nil
+}
+
+func (mc *MeetClient) ListActiveConferences() ([]*meet.ConferenceRecord, error) {
+	activeConferences, err := mc.service.ConferenceRecords.List().Filter("end_time IS NULL").Do()
+	if err != nil {
+		return nil, err
+	}
+	return activeConferences.ConferenceRecords, nil
 }

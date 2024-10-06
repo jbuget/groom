@@ -170,6 +170,14 @@
         </div>
     </main>
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            focusInput();
+        });
+
+        function focusInput() {
+            document.getElementById("filter-input").focus();
+        }
+
         function copyToClipboard(event, slug) {
             event.preventDefault();
             const link = `${window.location.origin}/${slug}`;

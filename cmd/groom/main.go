@@ -50,7 +50,6 @@ func main() {
 		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
-		api.POST("/rooms/migrate", handlers.MigrateRoomsHandler(db.Database, googleapi.MeetService))
 	}
 
 	// System routes

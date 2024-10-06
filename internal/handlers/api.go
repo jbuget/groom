@@ -4,10 +4,8 @@ import (
 	"database/sql"
 	googleapi "groom/internal/google"
 	"groom/internal/models"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -131,43 +129,5 @@ func DeleteRoomHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Room deleted successfully"})
-	}
-}
-
-func MigrateRoomsHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Récupérer toutes les rooms depuis la base de données
-		rooms, err := models.GetAllRooms(db)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve rooms"})
-			return
-		}
-
-		// Parcourir chaque room
-		for _, room := range rooms {
-			// Vérifier si le SpaceID ne commence pas par "spaces/"
-			if !strings.HasPrefix(room.SpaceID, "spaces/") {
-				// Appeler la fonction GetSpace pour récupérer le Space correspondant
-				space, err := meetService.GetSpace("spaces/"+room.SpaceID)
-				if err != nil {
-					log.Printf("Failed to retrieve space for Room ID %d: %v", room.ID, err)
-					continue // Ignorer cette room et continuer avec les autres
-				}
-
-				// Mettre à jour la propriété SpaceID avec space.Name
-				room.SpaceID = space.Name
-
-				// Mettre à jour la room dans la base de données
-				err = models.UpdateRoom(db, room)
-				if err != nil {
-					// Gestion des erreurs lors de la mise à jour de la room
-					log.Printf("Failed to update room ID %d: %v", room.ID, err)
-					continue // Ignorer cette room et continuer avec les autres
-				}
-			}
-		}
-
-		// Retourner un succès si toutes les rooms ont été migrées
-		c.JSON(http.StatusOK, gin.H{"message": "Rooms migration completed successfully"})
 	}
 }

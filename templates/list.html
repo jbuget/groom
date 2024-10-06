@@ -39,6 +39,32 @@
             max-width: 50rem;
             margin: 0 auto 3rem;
         }
+
+        .filter-container {
+            display: flex;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .filter-input {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            margin-right: 1rem;
+        }
+        .filter-reset-btn {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .filter-reset-btn:hover {
+            background-color: #ddd;
+        }
+
         .room-list {
             background-color: #fff;
             border-radius: 12px;
@@ -110,6 +136,12 @@
 <body>
     <main>
         <h1>Liste des salles</h1>
+
+        <div class="filter-container">
+            <input type="text" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." oninput="filterRooms()" />
+            <button class="filter-reset-btn" onclick="resetFilter()">Réinitialiser</button>
+        </div>
+
         <div class="room-list">
             <ul>
                 {{ range .rooms }}
@@ -142,6 +174,25 @@
             event.preventDefault();
             const link = `${window.location.origin}/${slug}`;
             navigator.clipboard.writeText(link);
+        }
+
+        function filterRooms() {
+            const filter = document.getElementById("filter-input").value.toLowerCase();
+            const rooms = document.querySelectorAll(".room-item");
+
+            rooms.forEach(room => {
+                const slug = room.querySelector(".room-item__slug").textContent.toLowerCase();
+                if (slug.includes(filter)) {
+                    room.style.display = "";
+                } else {
+                    room.style.display = "none";
+                }
+            });
+        }
+
+        function resetFilter() {
+            document.getElementById("filter-input").value = "";
+            filterRooms();
         }
     </script>
 </body>

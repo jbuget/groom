@@ -43,10 +43,6 @@ func main() {
 	r.GET("/auth/callback", handlers.AuthCallbackHandler(cfg.GoogleWorkspaceDomain))
 	r.GET("/auth/logout", handlers.LogoutHandler)
 
-	// Open routes
-	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
-	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
-
 	// Protected routes (by "X-API-TOKEN" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
@@ -55,6 +51,13 @@ func main() {
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
 	}
+
+	// System routes
+	r.GET("/healthz", handlers.HealthzHandler(db.Database, googleapi.MeetService))
+
+	// Open routes
+	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
+	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
 
 	// Démarrer le serveur
 	log.Printf("Server started at %s:%s", cfg.Host, cfg.Port)

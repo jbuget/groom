@@ -58,3 +58,33 @@ func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 		c.Redirect(http.StatusFound, "https://meet.google.com/"+room.SpaceID)
 	}
 }
+
+// GET /healthz
+func HealthzHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Vérifier la connexion à la base de données
+		err := db.Ping()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "unhealthy",
+				"error":  "Database connection failed",
+			})
+			return
+		}
+
+		// Vérifier l'accès à l'API Google Meet
+		_, err = meetService.ConferenceRecords.List().Do()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "unhealthy",
+				"error":  "Google Meet service unavailable",
+			})
+			return
+		}
+
+		// Si tout va bien, renvoyer un statut healthy
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+		})
+	}
+}

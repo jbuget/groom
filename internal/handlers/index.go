@@ -5,7 +5,6 @@ import (
 	googleapi "groom/internal/google"
 	"groom/internal/models"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/meet/v2"
@@ -82,30 +81,14 @@ func RedirectHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerF
 			return
 		}
 
-		var meetingCode string
-
-		// Si le SpaceID commence par "spaces/", on doit récupérer le Space via meetService
-		if strings.HasPrefix(room.SpaceID, "spaces/") {
-			space, err := meetService.GetSpace(room.SpaceID)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google Meet space", "details": err.Error()})
-				return
-			}
-
-			// Mettre à jour le SpaceID avec le meeting code (si disponible)
-			if space.MeetingCode != "" {
-				meetingCode = space.MeetingCode
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Meeting code not found for the space"})
-				return
-			}
-		} else {
-			meetingCode = room.SpaceID
+		space, err := meetService.GetSpace(room.SpaceID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google Meet space", "details": err.Error()})
+			return
 		}
-		// TODO check GMeet space validity
 
 		// Rediriger vers la room Google Meet correspondante
-		c.Redirect(http.StatusFound, "https://meet.google.com/"+meetingCode)
+		c.Redirect(http.StatusFound, space.MeetingUri)
 	}
 }
 

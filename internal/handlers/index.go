@@ -4,14 +4,24 @@ import (
 	"database/sql"
 	"groom/internal/models"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/meet/v2"
 )
 
+// Fonction pour déterminer si une room est occupée
+func isRoomOccupied(spaceID string, activeConferences []*meet.ConferenceRecord) bool {
+	for _, conference := range activeConferences {
+		if conference.Space == spaceID {
+			return true
+		}
+	}
+	return false
+}
+
 // GET /
-func ListRoomsHTMLHandler(db *sql.DB) gin.HandlerFunc {
+func ListRoomsHTMLHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rooms, err := models.GetAllRooms(db)
 		if err != nil {
@@ -19,9 +29,43 @@ func ListRoomsHTMLHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		activeConferences, err := meetService.ConferenceRecords.List().Filter("end_time IS NULL").Do()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "unhealthy",
+				"error":  "Google Meet service unavailable",
+			})
+			return
+		}
+
+
+		// RoomView est un type dérivé qui contient les informations nécessaires pour l'affichage
+		type RoomView struct {
+			ID         int    `json:"id"`
+			Slug       string `json:"slug"`
+			SpaceID    string `json:"space_id"`
+			IsOccupied bool   `json:"is_occupied"`
+		}
+
+		// Créer une liste de RoomView pour passer au template
+		var roomViews []RoomView
+		for _, room := range rooms {
+			// Créer une instance de RoomView pour chaque Room
+			roomView := RoomView{
+				ID:      room.ID,
+				Slug:    room.Slug,
+				SpaceID: room.SpaceID,
+				// Ajouter la propriété IsOccupied en fonction des conférences actives
+				IsOccupied: isRoomOccupied(room.SpaceID, activeConferences.ConferenceRecords),
+			}
+
+			// Ajouter RoomView à la liste
+			roomViews = append(roomViews, roomView)
+		}
+
 		// Render du template list.html avec la liste des rooms
 		c.HTML(http.StatusOK, "list.html", gin.H{
-			"rooms": rooms,
+			"rooms": roomViews,
 		})
 	}
 }
@@ -41,21 +85,30 @@ func RedirectHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 			return
 		}
 
-		if room.SpaceID == "" {
-			space, err := meetService.Spaces.Create(&meet.Space{}).Do()
+		var meetingCode string
+
+		// Si le SpaceID commence par "spaces/", on doit récupérer le Space via meetService
+		if strings.HasPrefix(room.SpaceID, "spaces/") {
+			space, err := meetService.Spaces.Get(room.SpaceID).Do()
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Google Meet space", "details": err.Error()})
 				return
 			}
-			room.SpaceID = space.MeetingCode
-			room.UpdatedAt = time.Now()
-			models.UpdateRoom(db, *room)
-		}
 
+			// Mettre à jour le SpaceID avec le meeting code (si disponible)
+			if space.MeetingCode != "" {
+				meetingCode = space.MeetingCode
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Meeting code not found for the space"})
+				return
+			}
+		} else {
+			meetingCode = room.SpaceID
+		}
 		// TODO check GMeet space validity
 
 		// Rediriger vers la room Google Meet correspondante
-		c.Redirect(http.StatusFound, "https://meet.google.com/"+room.SpaceID)
+		c.Redirect(http.StatusFound, "https://meet.google.com/"+meetingCode)
 	}
 }
 

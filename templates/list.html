@@ -94,6 +94,17 @@
         .room-item__copy-link-btn:active {
             border-color: black;
         }
+
+        .room-item__status {
+            width: 0.5rem;
+            height: 0.5rem;
+            display: inline-block;
+            border-radius: 50%;
+            background: #3CB371;
+        }
+        .room-item__status.occupied {
+            background: red;
+        }
     </style>
 </head>
 <body>
@@ -105,7 +116,14 @@
                 <li>
                     <div class="room-item">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
-                            <span class="room-item__slug">{{ .Slug }}</span>
+                            <span class="room-item__slug">
+                                {{ .Slug }}
+                                {{ if .IsOccupied }}
+                                <span class="room-item__status occupied"></span>
+                                {{ else }}
+                                <span class="room-item__status"></span>
+                                {{ end }}    
+                            </span>
                             <span class="room-item__space">https://meet.google.com/{{ .SpaceID }}</span>
                         </a>
                         <div class="room-item__actions">

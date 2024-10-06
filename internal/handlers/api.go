@@ -44,8 +44,15 @@ func CreateRoomHandler(db *sql.DB, meetService *meet.Service) gin.HandlerFunc {
 			return
 		}
 
+		space, err := meetService.Spaces.Create(&meet.Space{}).Do()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating Google Meet space"})
+			return
+		}
+
 		room := models.Room{
 			Slug:    requestBody.Slug,
+			SpaceID: space.Name,
 		}
 
 		createdRoom, err := models.CreateRoom(db, room)
@@ -80,7 +87,7 @@ func UpdateRoomHandler(db *sql.DB) gin.HandlerFunc {
 
 		// Get and check body params
 		var requestBody struct {
-			Slug string `json:"slug"`
+			Slug    string `json:"slug"`
 			SpaceID string `json:"space_id"`
 		}
 		if err := c.BindJSON(&requestBody); err != nil {

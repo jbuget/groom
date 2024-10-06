@@ -56,7 +56,7 @@ func main() {
 	r.GET("/healthz", handlers.HealthzHandler(db.Database, googleapi.MeetService))
 
 	// Open routes
-	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database))
+	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database, googleapi.MeetService))
 	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
 
 	// Démarrer le serveur

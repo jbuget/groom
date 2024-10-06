@@ -6,7 +6,9 @@ import (
 	"groom/internal/config"
 	"log"
 	"os"
+	"time"
 
+	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google" // Importer le package meet/v2
 	"golang.org/x/oauth2/jwt"
@@ -19,6 +21,7 @@ var ServiceAccountOAuthConfig *jwt.Config
 
 type MeetClient struct {
 	service *meet.Service
+	cache   *cache.Cache
 }
 
 var MeetService *MeetClient
@@ -80,6 +83,7 @@ func InitServiceAccountServices(cfg config.Config) {
 	// Initialisation du MeetClient exporté
 	MeetService = &MeetClient{
 		service: meetService,
+		cache:   cache.New(5*time.Second, 15*time.Minute),
 	}
 
 }
@@ -93,10 +97,20 @@ func (mc *MeetClient) CheckMeetClient() error {
 }
 
 func (mc *MeetClient) GetSpace(spaceID string) (*meet.Space, error) {
+	cacheKey := "meet_space_" + spaceID
+
+	if cachedSpace, found := mc.cache.Get(cacheKey); found {
+		return cachedSpace.(*meet.Space), nil
+	}
+
 	space, err := mc.service.Spaces.Get(spaceID).Do()
+
 	if err != nil {
 		return nil, err
 	}
+
+	mc.cache.Set(cacheKey, space, 1*time.Hour)
+
 	return space, nil
 }
 
@@ -109,9 +123,18 @@ func (mc *MeetClient) CreateSpace() (*meet.Space, error) {
 }
 
 func (mc *MeetClient) ListActiveConferences() ([]*meet.ConferenceRecord, error) {
+	cacheKey := "meet_active_conferences"
+
+	if cachedConferences, found := mc.cache.Get(cacheKey); found {
+		return cachedConferences.([]*meet.ConferenceRecord), nil
+	}
+
 	activeConferences, err := mc.service.ConferenceRecords.List().Filter("end_time IS NULL").Do()
 	if err != nil {
 		return nil, err
 	}
+
+	mc.cache.Set(cacheKey, activeConferences.ConferenceRecords, cache.DefaultExpiration)
+
 	return activeConferences.ConferenceRecords, nil
 }

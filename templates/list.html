@@ -138,7 +138,7 @@
         <h1>Liste des salles</h1>
 
         <div class="filter-container">
-            <input type="text" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." oninput="filterRooms()" />
+            <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." oninput="filterRooms()" onkeydown="launchRoom(event)" />
             <button class="filter-reset-btn" onclick="resetFilter()">Réinitialiser</button>
         </div>
 
@@ -170,6 +170,14 @@
         </div>
     </main>
     <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            focusInput();
+        });
+
+        function focusInput() {
+            document.getElementById("filter-input").focus();
+        }
+
         function copyToClipboard(event, slug) {
             event.preventDefault();
             const link = `${window.location.origin}/${slug}`;
@@ -188,6 +196,17 @@
                     room.style.display = "none";
                 }
             });
+        }
+
+        function launchRoom(event) {
+            if (event.key === "Enter") {
+                const rooms = document.querySelectorAll(".room-item");
+                const visibleRooms = Array.from(rooms).filter(room => room.style.display !== "none");
+                if (visibleRooms.length === 1) {
+                    const link = visibleRooms[0].querySelector(".room-item__link").href;
+                    window.open(link, "_blank");
+                }
+            }
         }
 
         function resetFilter() {

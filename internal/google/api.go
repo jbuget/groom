@@ -122,11 +122,23 @@ func (mc *MeetClient) CreateSpace() (*meet.Space, error) {
 	return space, nil
 }
 
-func (mc *MeetClient) ListActiveConferences() ([]*meet.ConferenceRecord, error) {
+// ParticipantDTO représente un participant avec les propriétés importantes.
+type ParticipantDTO struct {
+	DisplayName string `json:"display_name"`
+}
+
+// ConferenceDTO représente une conférence avec ses participants.
+type ConferenceDTO struct {
+	Name         string           `json:"name"`
+	SpaceID      string           `json:"space_id"`
+	Participants []ParticipantDTO `json:"participants"`
+}
+
+func (mc *MeetClient) ListActiveConferences() ([]*ConferenceDTO, error) {
 	cacheKey := "meet_active_conferences"
 
 	if cachedConferences, found := mc.cache.Get(cacheKey); found {
-		return cachedConferences.([]*meet.ConferenceRecord), nil
+		return cachedConferences.([]*ConferenceDTO), nil
 	}
 
 	activeConferences, err := mc.service.ConferenceRecords.List().Filter("end_time IS NULL").Do()
@@ -134,7 +146,30 @@ func (mc *MeetClient) ListActiveConferences() ([]*meet.ConferenceRecord, error) 
 		return nil, err
 	}
 
-	mc.cache.Set(cacheKey, activeConferences.ConferenceRecords, cache.DefaultExpiration)
+	var conferencesDTO []*ConferenceDTO
 
-	return activeConferences.ConferenceRecords, nil
+	for _, conference := range activeConferences.ConferenceRecords {
+		conferenceDTO := &ConferenceDTO{
+			Name:    conference.Name,
+			SpaceID: conference.Space,
+		}
+
+		participantsList, err := mc.service.ConferenceRecords.Participants.List(conference.Name).Filter("latest_end_time IS NULL").Do()
+		if err != nil {
+			log.Printf("Failed to retrieve participants for conference %s: %v", conference.Name, err)
+		} else {
+			for _, participant := range participantsList.Participants {
+				participantDTO := ParticipantDTO{
+					DisplayName: participant.Name,
+				}
+				conferenceDTO.Participants = append(conferenceDTO.Participants, participantDTO)
+			}
+		}
+
+		conferencesDTO = append(conferencesDTO, conferenceDTO)
+	}
+
+	mc.cache.Set(cacheKey, conferencesDTO, cache.DefaultExpiration)
+
+	return conferencesDTO, nil
 }

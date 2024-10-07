@@ -131,6 +131,11 @@
         .room-item__status.occupied {
             background: red;
         }
+        .room-item__participant-count {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -152,11 +157,12 @@
                                 {{ .Slug }}
                                 {{ if .IsOccupied }}
                                 <span class="room-item__status occupied"></span>
+                                <span class="room-item__participant-count">{{ .ParticipantCount }} participants</span>
                                 {{ else }}
                                 <span class="room-item__status"></span>
                                 {{ end }}    
                             </span>
-                            <span class="room-item__space">https://meet.google.com/{{ .SpaceID }}</span>
+                            <span class="room-item__space">{{ .SpaceID }}</span>
                         </a>
                         <div class="room-item__actions">
                             <button class="room-item__copy-link-btn" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">🔗</button>

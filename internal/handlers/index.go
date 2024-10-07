@@ -7,17 +7,25 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/api/meet/v2"
 )
 
 // Fonction pour déterminer si une room est occupée
-func isRoomOccupied(spaceID string, activeConferences []*meet.ConferenceRecord) bool {
+func isRoomOccupied(spaceID string, activeConferences []*googleapi.ConferenceDTO) bool {
 	for _, conference := range activeConferences {
-		if conference.Space == spaceID {
+		if conference.SpaceID == spaceID {
 			return true
 		}
 	}
 	return false
+}
+
+func getRoomParticipantCount(spaceID string, activeConferences []*googleapi.ConferenceDTO) int {
+	for _, conference := range activeConferences {
+		if conference.SpaceID == spaceID {
+			return len(conference.Participants)
+		}
+	}
+	return 0
 }
 
 // GET /
@@ -35,31 +43,27 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			return
 		}
 
-		// RoomView est un type dérivé qui contient les informations nécessaires pour l'affichage
 		type RoomView struct {
-			ID         int    `json:"id"`
-			Slug       string `json:"slug"`
-			SpaceID    string `json:"space_id"`
-			IsOccupied bool   `json:"is_occupied"`
+			ID               int    `json:"id"`
+			Slug             string `json:"slug"`
+			SpaceID          string `json:"space_id"`
+			IsOccupied       bool   `json:"is_occupied"`
+			ParticipantCount int    `json:"participant_count"`
 		}
 
-		// Créer une liste de RoomView pour passer au template
 		var roomViews []RoomView
 		for _, room := range rooms {
-			// Créer une instance de RoomView pour chaque Room
 			roomView := RoomView{
-				ID:      room.ID,
-				Slug:    room.Slug,
-				SpaceID: room.SpaceID,
-				// Ajouter la propriété IsOccupied en fonction des conférences actives
-				IsOccupied: isRoomOccupied(room.SpaceID, activeConferences),
+				ID:               room.ID,
+				Slug:             room.Slug,
+				SpaceID:          room.SpaceID,
+				IsOccupied:       isRoomOccupied(room.SpaceID, activeConferences),
+				ParticipantCount: getRoomParticipantCount(room.SpaceID, activeConferences),
 			}
 
-			// Ajouter RoomView à la liste
 			roomViews = append(roomViews, roomView)
 		}
 
-		// Render du template list.html avec la liste des rooms
 		c.HTML(http.StatusOK, "list.html", gin.H{
 			"rooms": roomViews,
 		})

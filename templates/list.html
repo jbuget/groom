@@ -157,7 +157,11 @@
                                 {{ .Slug }}
                                 {{ if .IsOccupied }}
                                 <span class="room-item__status occupied"></span>
-                                <span class="room-item__participant-count">{{ .ParticipantCount }} participants</span>
+                                    {{ if eq .ParticipantCount 1 }}
+                                    <span class="room-item__participant-count">{{ .ParticipantCount }} participant</span>
+                                    {{ else }}
+                                    <span class="room-item__participant-count">{{ .ParticipantCount }} participants</span>
+                                    {{ end }}
                                 {{ else }}
                                 <span class="room-item__status"></span>
                                 {{ end }}    

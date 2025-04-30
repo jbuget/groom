@@ -23,6 +23,54 @@ func ListRoomsJSONHandler(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
+// GetRoomStatusHandler returns status information about all rooms
+func GetRoomStatusHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rooms, err := models.GetAllRooms(db)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve rooms"})
+			return
+		}
+
+		activeConferences, err := meetService.ListActiveConferences()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve active conferences"})
+			return
+		}
+
+		type RoomStatus struct {
+			Slug             string `json:"slug"`
+			SpaceID          string `json:"space_id"`
+			IsOccupied       bool   `json:"is_occupied"`
+			ParticipantCount int    `json:"participant_count"`
+		}
+
+		statuses := make([]RoomStatus, 0, len(rooms))
+
+		for _, room := range rooms {
+			isOccupied := false
+			participantCount := 0
+
+			for _, conference := range activeConferences {
+				if conference.SpaceID == room.SpaceID {
+					isOccupied = true
+					participantCount = len(conference.Participants)
+					break
+				}
+			}
+
+			statuses = append(statuses, RoomStatus{
+				Slug:             room.Slug,
+				SpaceID:          room.SpaceID,
+				IsOccupied:       isOccupied,
+				ParticipantCount: participantCount,
+			})
+		}
+
+		c.JSON(http.StatusOK, statuses)
+	}
+}
+
 // Handler pour créer une room
 func CreateRoomHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {

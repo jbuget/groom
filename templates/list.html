@@ -179,19 +179,40 @@
             padding: 0 2px;
             box-sizing: border-box;
         }
+        
+        .update-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        
+        .update-indicator.updating {
+            background-color: #3CB371;
+            opacity: 1;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
     <main>
-        <h1>Liste des salles</h1>
+        <h1>Liste des salles <span id="update-indicator" class="update-indicator"></span></h1>
 
         <div class="filter-container">
-            <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." oninput="filterRooms()" onkeydown="launchRoom(event)" />
-            <button class="filter-reset-btn" onclick="resetFilter()">Réinitialiser</button>
+            <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." />
+            <button class="filter-reset-btn" id="filter-reset-btn">Réinitialiser</button>
         </div>
 
-        {{ if .occupiedRooms }}
-        <div class="room-list occupied-rooms">
+        <div class="room-list occupied-rooms" {{ if not .occupiedRooms }}style="display: none"{{ end }}>
             <h2>Réunions en cours</h2>
             <ul>
                 {{ range .occupiedRooms }}
@@ -204,7 +225,7 @@
                                 <span class="room-item__participant-badge">{{ .ParticipantCount }}</span>
                                 {{ end }}
                             </div>
-                            <button class="room-item__copy-link" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">
+                            <button class="room-item__copy-link" title="Copier le lien">
                                 <span class="room-item__copy-icon"></span>Copier le lien
                             </button>
                         </a>
@@ -213,10 +234,8 @@
                 {{ end }}
             </ul>
         </div>
-        {{ end }}
 
-        {{ if .unoccupiedRooms }}
-        <div class="room-list unoccupied-rooms">
+        <div class="room-list unoccupied-rooms" {{ if not .unoccupiedRooms }}style="display: none"{{ end }}>
             <h2>Salles disponibles</h2>
             <ul>
                 {{ range .unoccupiedRooms }}
@@ -226,7 +245,7 @@
                             <div class="room-item__header">
                                 <span class="room-item__slug">{{ .Slug }}</span>
                             </div>
-                            <button class="room-item__copy-link" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">
+                            <button class="room-item__copy-link" title="Copier le lien">
                                 <span class="room-item__copy-icon"></span>Copier le lien
                             </button>
                         </a>
@@ -235,7 +254,6 @@
                 {{ end }}
             </ul>
         </div>
-        {{ end }}
         
         {{ if not .occupiedRooms }}{{ if not .unoccupiedRooms }}
         <div class="room-list">
@@ -246,9 +264,150 @@
         {{ end }}{{ end }}
     </main>
     <script>
+        // Configuration for room status updates
+        const STATUS_UPDATE_INTERVAL = 15000; // 15 seconds
+        let statusUpdateTimer = null;
+        let roomStatusData = null;
+
         document.addEventListener("DOMContentLoaded", () => {
             focusInput();
+            initRoomStatusUpdates();
+            setupEventDelegation();
         });
+
+        // Initialize room status update system using Page Visibility API
+        function initRoomStatusUpdates() {
+            // Initial status fetch
+            fetchRoomStatus();
+            
+            // Set up visibility change detection
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Start regular polling when visible
+            if (document.visibilityState === 'visible') {
+                startStatusPolling();
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === 'visible') {
+                // Tab became visible - fetch immediately and start polling
+                fetchRoomStatus();
+                startStatusPolling();
+            } else {
+                // Tab hidden - stop polling to save resources
+                stopStatusPolling();
+            }
+        }
+
+        function startStatusPolling() {
+            if (!statusUpdateTimer) {
+                statusUpdateTimer = setInterval(fetchRoomStatus, STATUS_UPDATE_INTERVAL);
+            }
+        }
+
+        function stopStatusPolling() {
+            if (statusUpdateTimer) {
+                clearInterval(statusUpdateTimer);
+                statusUpdateTimer = null;
+            }
+        }
+
+        function fetchRoomStatus() {
+            // Show update indicator
+            const indicator = document.getElementById('update-indicator');
+            indicator.classList.add('updating');
+            
+            fetch('/status')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    roomStatusData = data;
+                    // Always use the Turbolinks approach to update UI
+                    updateRoomUI(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching room status:', error);
+                })
+                .finally(() => {
+                    // Hide indicator after a short delay
+                    setTimeout(() => {
+                        indicator.classList.remove('updating');
+                    }, 500);
+                });
+        }
+
+        function updateRoomUI(statusData) {
+            // Use a Turbolinks-style approach to update the entire room list
+            fetch('/')
+                .then(response => response.text())
+                .then(html => {
+                    // Create a temporary element to parse the HTML
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Get the main content area from the fetched page
+                    const newMainContent = doc.querySelector('main');
+
+                    // Preserve the current filter value and focus state
+                    const currentFilterValue = document.getElementById('filter-input').value;
+                    const wasFilterFocused = document.activeElement === document.getElementById('filter-input');
+                    
+                    // Replace the current main content with the new one
+                    const currentMain = document.querySelector('main');
+                    currentMain.innerHTML = newMainContent.innerHTML;
+                    
+                    // Restore the filter value and reapply filtering
+                    const filterInput = document.getElementById('filter-input');
+                    filterInput.value = currentFilterValue;
+                    if (currentFilterValue) {
+                        filterRooms();
+                    }
+                    
+                    // Restore focus if needed
+                    if (wasFilterFocused) {
+                        filterInput.focus();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating rooms UI:', error);
+                });
+        }
+        
+        function setupEventDelegation() {
+            // Use event delegation for copy button clicks
+            document.addEventListener('click', function(event) {
+                // Handle copy button clicks
+                const copyButton = event.target.closest('.room-item__copy-link');
+                if (copyButton) {
+                    const slug = copyButton.closest('.room-item').querySelector('.room-item__slug').textContent.trim();
+                    copyToClipboard(event, slug);
+                }
+                
+                // Handle filter reset button clicks
+                if (event.target.closest('#filter-reset-btn')) {
+                    resetFilter();
+                }
+            });
+            
+            // Handle filter input
+            document.addEventListener('input', function(event) {
+                if (event.target.id === 'filter-input') {
+                    filterRooms();
+                }
+            });
+            
+            // Handle enter key for launching rooms
+            document.addEventListener('keydown', function(event) {
+                if (event.target.id === 'filter-input' && event.key === 'Enter') {
+                    launchRoom(event);
+                }
+            });
+        }
 
         function focusInput() {
             document.getElementById("filter-input").focus();
@@ -285,6 +444,13 @@
                     list.style.display = 'none';
                 }
             });
+            
+            // Show "no rooms" message if all categories are hidden
+            const allListsHidden = Array.from(document.querySelectorAll('.room-list')).every(list => list.style.display === 'none');
+            const noRoomsMessage = document.querySelector('.no-rooms-message');
+            if (noRoomsMessage) {
+                noRoomsMessage.style.display = allListsHidden ? '' : 'none';
+            }
         }
 
         function launchRoom(event) {

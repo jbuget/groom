@@ -69,6 +69,9 @@ http://localhost:3000/ma-room
 # Lister les rooms
 curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
 
+# Récupérer le statut des rooms (occupation et nombre de participants)
+curl http://localhost:3000/api/room-status -H "X-API-KEY: your_api_key_here"
+
 # Ajouter une room
 curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 

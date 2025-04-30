@@ -47,6 +47,7 @@ func main() {
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
 		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))
+		api.GET("/room-status", handlers.GetRoomStatusHandler(db.Database, googleapi.MeetService))
 		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
@@ -57,6 +58,7 @@ func main() {
 
 	// Open routes
 	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database, googleapi.MeetService))
+	r.GET("/status", handlers.RequireLogin(), handlers.GetRoomStatusHandler(db.Database, googleapi.MeetService))
 	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
 
 	// Démarrer le serveur

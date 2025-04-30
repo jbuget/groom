@@ -71,70 +71,113 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.16);
             padding: 16px 0;
             width: 100%;
+            margin-bottom: 20px;
+        }
+        .room-list h2 {
+            padding: 0 16px;
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+        .room-list ul {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            padding: 0 16px;
+        }
+        .occupied-rooms {
+            border-left: 4px solid #3CB371;
+        }
+        .unoccupied-rooms {
+            border-left: 4px solid #888888;
         }
         .room-item {
-            margin: 5px 15px;
             border-radius: 5px;
             display: flex;
+            flex-direction: column;
+            border: 1px solid #eee;
             justify-content: space-between;
-            align-items: center;
-        }
-        .room-item:hover,
-        .room-item:focus,
-        .room-item:active {
-            background: #f4f4f4;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
         }
         .room-item__link {
-            padding: 7px;
             display: flex;
             flex-direction: column;
             flex-grow: 1;
+            text-decoration: none;
+            padding: 10px 10px 0 10px;
+            cursor: pointer;
+        }
+        .room-item__link:hover:not(:has(.room-item__copy-link:hover)) {
+            background: rgba(0, 123, 255, 0.05);
+        }
+        .room-item__header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
         }
         .room-item__slug {
             font-weight: bold;
             color: #000;
-            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
         }
-        .room-item__space {
-            color: #aaa;
-            display: block;
-            font-size: 0.80rem;
-        }
-
-        .room-item__actions {
-            padding: 0 10px;
-        }
-
-        .room-item__copy-link-btn {
-            border: 1px solid transparent;
-            background: #f4f4f4;
-            border-radius: 5px;
+        .room-item__copy-link {
+            font-size: 0.7rem;
+            color: #888;
+            margin: .25rem 0 8px -.5rem;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
             cursor: pointer;
-            font-size: 1rem;
-            margin-left: 10px;
-            width: 2rem;
-            height: 2rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            border: none;
+            background: transparent;
+            align-self: flex-start;
         }
-        .room-item__copy-link-btn:hover,
-        .room-item__copy-link-btn:focus,
-        .room-item__copy-link-btn:active {
-            border-color: black;
+        .room-item__copy-link:hover {
+            color: #000;
+            background: rgba(0, 0, 0, 0.05);
         }
-
-        .room-item__status {
-            width: 0.5rem;
-            height: 0.5rem;
-            display: inline-block;
+        .room-item__copy-link:active {
+            color: #000;
+            background: rgba(0, 0, 0, 0.1);
+            transform: scale(0.98);
+        }
+        .room-item__copy-icon {
+            width: 14px;
+            height: 14px;
+            display: block;
+            margin-right: 3px;
+            mask-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PHBhdGggZD0iTTE3IDJ2MmgzLjAwN2MuNTQ4IDAgLjk5My40NDUuOTkzLjk5M3YxNi4wMTRhLjk5NC45OTQgMCAwIDEtLjk5My45OTNIMy45OTNBLjk5NC45OTQgMCAwIDEgMyAyMS4wMDdWNC45OTNDMyA0LjQ0NSAzLjQ0NSA0IDMuOTkzIDRIN1YyaDEwWk03IDZINXYxNGgxNFY2aC0ydjJIN1Y2Wm04LTJIOXYyaDZWNFoiLz48L3N2Zz4=);
+            mask-repeat: no-repeat;
+            mask-position: center;
+            mask-size: contain;
+            background-color: currentColor;
+        }
+        .room-item__participant-info {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        .room-item__participant-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            background: #E74C3C;
+            color: white;
             border-radius: 50%;
-            background: #3CB371;
-        }
-        .room-item__status.occupied {
-            background: red;
-        }
-        .room-item__participant-count {
-            font-size: 0.8rem;
-            font-weight: 400;
-            color: #666;
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 0 2px;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -147,33 +190,60 @@
             <button class="filter-reset-btn" onclick="resetFilter()">Réinitialiser</button>
         </div>
 
-        <div class="room-list">
+        {{ if .occupiedRooms }}
+        <div class="room-list occupied-rooms">
+            <h2>Réunions en cours</h2>
             <ul>
-                {{ range .rooms }}
+                {{ range .occupiedRooms }}
                 <li>
                     <div class="room-item">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
-                            <span class="room-item__slug">
-                                {{ .Slug }}
-                                {{ if .IsOccupied }}
-                                <span class="room-item__status occupied"></span>
-                                <span class="room-item__participant-count">{{ .ParticipantCount }} participants</span>
-                                {{ else }}
-                                <span class="room-item__status"></span>
-                                {{ end }}    
-                            </span>
-                            <span class="room-item__space">{{ .SpaceID }}</span>
+                            <div class="room-item__header">
+                                <span class="room-item__slug">{{ .Slug }}</span>
+                                {{ if gt .ParticipantCount 0 }}
+                                <span class="room-item__participant-badge">{{ .ParticipantCount }}</span>
+                                {{ end }}
+                            </div>
+                            <button class="room-item__copy-link" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">
+                                <span class="room-item__copy-icon"></span>Copier le lien
+                            </button>
                         </a>
-                        <div class="room-item__actions">
-                            <button class="room-item__copy-link-btn" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">🔗</button>
-                        </div>
                     </div>
                 </li>
-                {{ else }}
-                <li>Aucune salle définie</li>
                 {{ end }}
             </ul>
         </div>
+        {{ end }}
+
+        {{ if .unoccupiedRooms }}
+        <div class="room-list unoccupied-rooms">
+            <h2>Salles disponibles</h2>
+            <ul>
+                {{ range .unoccupiedRooms }}
+                <li>
+                    <div class="room-item">
+                        <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
+                            <div class="room-item__header">
+                                <span class="room-item__slug">{{ .Slug }}</span>
+                            </div>
+                            <button class="room-item__copy-link" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">
+                                <span class="room-item__copy-icon"></span>Copier le lien
+                            </button>
+                        </a>
+                    </div>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+        {{ end }}
+        
+        {{ if not .occupiedRooms }}{{ if not .unoccupiedRooms }}
+        <div class="room-list">
+            <ul>
+                <li>Aucune salle définie</li>
+            </ul>
+        </div>
+        {{ end }}{{ end }}
     </main>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
@@ -186,6 +256,7 @@
 
         function copyToClipboard(event, slug) {
             event.preventDefault();
+            event.stopPropagation();
             const link = `${window.location.origin}/${slug}`;
             navigator.clipboard.writeText(link);
         }
@@ -193,13 +264,25 @@
         function filterRooms() {
             const filter = document.getElementById("filter-input").value.toLowerCase();
             const rooms = document.querySelectorAll(".room-item");
+            let visibleRoomsCount = 0;
 
             rooms.forEach(room => {
                 const slug = room.querySelector(".room-item__slug").textContent.toLowerCase();
                 if (slug.includes(filter)) {
-                    room.style.display = "";
+                    room.closest('li').style.display = "";
+                    visibleRoomsCount++;
                 } else {
-                    room.style.display = "none";
+                    room.closest('li').style.display = "none";
+                }
+            });
+
+            // Check if room categories should be shown or hidden
+            document.querySelectorAll('.room-list').forEach(list => {
+                const hasVisibleRooms = Array.from(list.querySelectorAll('.room-item')).some(item => item.closest('li').style.display !== 'none');
+                if (hasVisibleRooms) {
+                    list.style.display = '';
+                } else {
+                    list.style.display = 'none';
                 }
             });
         }
@@ -207,7 +290,7 @@
         function launchRoom(event) {
             if (event.key === "Enter") {
                 const rooms = document.querySelectorAll(".room-item");
-                const visibleRooms = Array.from(rooms).filter(room => room.style.display !== "none");
+                const visibleRooms = Array.from(rooms).filter(room => room.closest('li').style.display !== "none");
                 if (visibleRooms.length === 1) {
                     const link = visibleRooms[0].querySelector(".room-item__link").href;
                     window.open(link, "_blank");

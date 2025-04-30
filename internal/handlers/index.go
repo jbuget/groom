@@ -51,21 +51,29 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			ParticipantCount int    `json:"participant_count"`
 		}
 
-		var roomViews []RoomView
+		var occupiedRooms []RoomView
+		var unoccupiedRooms []RoomView
+
 		for _, room := range rooms {
+			isOccupied := isRoomOccupied(room.SpaceID, activeConferences)
 			roomView := RoomView{
 				ID:               room.ID,
 				Slug:             room.Slug,
 				SpaceID:          room.SpaceID,
-				IsOccupied:       isRoomOccupied(room.SpaceID, activeConferences),
+				IsOccupied:       isOccupied,
 				ParticipantCount: getRoomParticipantCount(room.SpaceID, activeConferences),
 			}
 
-			roomViews = append(roomViews, roomView)
+			if isOccupied {
+				occupiedRooms = append(occupiedRooms, roomView)
+			} else {
+				unoccupiedRooms = append(unoccupiedRooms, roomView)
+			}
 		}
 
 		c.HTML(http.StatusOK, "list.html", gin.H{
-			"rooms": roomViews,
+			"occupiedRooms":   occupiedRooms,
+			"unoccupiedRooms": unoccupiedRooms,
 		})
 	}
 }

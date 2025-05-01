@@ -38,6 +38,9 @@ func main() {
 	// Chargement des templates HTML
 	r.LoadHTMLGlob("templates/*")
 
+	// Serves static files
+	r.Static("/static", "./static")
+
 	// Routes pour l'authentification Google
 	r.GET("/auth/login", handlers.LoginHandler)
 	r.GET("/auth/callback", handlers.AuthCallbackHandler(cfg.GoogleWorkspaceDomain))

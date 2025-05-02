@@ -7,6 +7,11 @@ document.addEventListener("DOMContentLoaded", () => {
     focusInput();
     initRoomStatusUpdates();
     setupEventDelegation();
+    
+    // Add auth-user class to body if authenticated
+    if (document.body.dataset.authenticated === "true") {
+        document.body.classList.add("auth-user");
+    }
 });
 
 // Initialize room status update system using Page Visibility API
@@ -106,9 +111,19 @@ function updateRoomUI(statusData) {
             if (wasFilterFocused) {
                 filterInput.focus();
             }
+            
+            // Remove all loading states from star buttons after UI update
+            document.querySelectorAll('.room-item__star.loading').forEach(button => {
+                button.classList.remove('loading');
+            });
         })
         .catch(error => {
             console.error('Error updating rooms UI:', error);
+            
+            // Remove all loading states on error
+            document.querySelectorAll('.room-item__star.loading').forEach(button => {
+                button.classList.remove('loading');
+            });
         });
 }
 
@@ -120,6 +135,14 @@ function setupEventDelegation() {
         if (copyButton) {
             const slug = copyButton.closest('.room-item').querySelector('.room-item__slug').textContent.trim();
             copyToClipboard(event, slug);
+        }
+        
+        // Handle star button clicks
+        const starButton = event.target.closest('.room-item__star');
+        if (starButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleStarRoom(starButton);
         }
         
         // Handle filter reset button clicks
@@ -140,6 +163,53 @@ function setupEventDelegation() {
         if (event.target.id === 'filter-input' && event.key === 'Enter') {
             launchRoom(event);
         }
+    });
+}
+
+// Function to toggle star status of a room
+function toggleStarRoom(starButton) {
+    const roomItem = starButton.closest('.room-item');
+    const roomId = roomItem.dataset.id;
+    
+    if (!roomId) {
+        console.error('Room ID not found');
+        return;
+    }
+    
+    // Prevent double-clicks by checking if already loading
+    if (starButton.classList.contains('loading')) {
+        return;
+    }
+    
+    // Add loading state (pulsating gray filled star)
+    starButton.classList.add('loading');
+    
+    // Save current state to revert to on error
+    const wasStarred = roomItem.classList.contains('starred');
+    
+    // Call the API to toggle star status
+    fetch(`/api/user/rooms/${roomId}/toggle-star`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Refresh the room list to update sorting,
+        // but keep the loading animation until the refresh is complete
+        fetchRoomStatus();
+    })
+    .catch(error => {
+        console.error('Error toggling star status:', error);
+        
+        // Remove loading state immediately on error
+        starButton.classList.remove('loading');
     });
 }
 

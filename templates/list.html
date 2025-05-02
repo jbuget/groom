@@ -6,9 +6,16 @@
     <title>Liste des salles</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body>
+<body data-authenticated="{{ if .isAuthenticated }}true{{ else }}false{{ end }}">
     <main>
-        <h1>Liste des salles <span id="update-indicator" class="update-indicator"></span></h1>
+        <div class="header-container">
+            <h1>Liste des salles <span id="update-indicator" class="update-indicator"></span></h1>
+            {{ if not .isAuthenticated }}
+            <a href="/auth/login" class="login-link">Se connecter</a>
+            {{ else }}
+            <a href="/auth/logout" class="login-link">Se déconnecter</a>
+            {{ end }}
+        </div>
 
         <div class="filter-container">
             <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." />
@@ -20,9 +27,12 @@
             <ul>
                 {{ range .occupiedRooms }}
                 <li>
-                    <div class="room-item">
+                    <div class="room-item {{ if .IsStarred }}starred{{ end }}" data-id="{{ .ID }}">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
                             <div class="room-item__header">
+                                <button class="room-item__star" title="{{ if .IsStarred }}Retirer des favoris{{ else }}Ajouter aux favoris{{ end }}">
+                                    <span class="room-item__star-icon"></span>
+                                </button>
                                 <span class="room-item__slug">{{ .Slug }}</span>
                                 {{ if gt .ParticipantCount 0 }}
                                 <span class="room-item__participant-badge">{{ .ParticipantCount }}</span>
@@ -43,9 +53,12 @@
             <ul>
                 {{ range .unoccupiedRooms }}
                 <li>
-                    <div class="room-item">
+                    <div class="room-item {{ if .IsStarred }}starred{{ end }}" data-id="{{ .ID }}">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
                             <div class="room-item__header">
+                                <button class="room-item__star" title="{{ if .IsStarred }}Retirer des favoris{{ else }}Ajouter aux favoris{{ end }}">
+                                    <span class="room-item__star-icon"></span>
+                                </button>
                                 <span class="room-item__slug">{{ .Slug }}</span>
                             </div>
                             <button class="room-item__copy-link" title="Copier le lien">

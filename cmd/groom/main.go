@@ -55,6 +55,14 @@ func main() {
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
 	}
+	
+	// User routes (require login)
+	user := r.Group("/api/user", handlers.RequireLogin())
+	{
+		user.POST("/rooms/:id/star", handlers.StarRoomHandler(db.Database))
+		user.DELETE("/rooms/:id/star", handlers.UnstarRoomHandler(db.Database))
+		user.POST("/rooms/:id/toggle-star", handlers.ToggleStarRoomHandler(db.Database))
+	}
 
 	// System routes
 	r.GET("/healthz", handlers.HealthzHandler(db.Database, googleapi.MeetService))

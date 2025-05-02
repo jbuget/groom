@@ -7,7 +7,30 @@ body {
 }
 h1 {
     color: #333;
-    align-self: flex-start;
+    margin: 0;
+}
+
+.header-container {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.login-link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.login-link:hover {
+    background-color: #0056b3;
+    color: white;
 }
 ul {
     list-style-type: none;
@@ -94,6 +117,12 @@ main {
     -webkit-user-select: none;
     position: relative;
 }
+
+.room-item.starred {
+    border: 1px solid rgba(218, 165, 32, 0.8);
+    box-shadow: 0 2px 6px rgba(218, 165, 32, 0.3);
+}
+
 .room-item__link {
     display: flex;
     flex-direction: column;
@@ -107,8 +136,9 @@ main {
 }
 .room-item__header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .25rem;
     position: relative;
 }
 .room-item__slug {
@@ -158,7 +188,12 @@ main {
     justify-content: flex-end;
     margin-top: 12px;
 }
+.room-item__participant-badge,
+.room-item__star {
+    flex: 0;
+}
 .room-item__participant-badge {
+    margin-left: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -171,6 +206,56 @@ main {
     font-weight: bold;
     padding: 0 2px;
     box-sizing: border-box;
+}
+
+.room-item__star {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    z-index: 2;
+    display: none;  /* Hide stars by default, show on authenticated users */
+}
+
+.room-item__star-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    background-color: #ccc;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.room-item__star:hover .room-item__star-icon {
+    background-color: #FFD700;
+}
+
+.room-item.starred .room-item__star-icon {
+    background-color: #FFD700;
+}
+
+.room-item__star.loading .room-item__star-icon {
+    animation: star-pulse 1.2s infinite;
+    background-color: #777; /* Gray color for loading state */
+}
+
+@keyframes star-pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.auth-user .room-item__star {
+    display: block;
 }
 
 .update-indicator {

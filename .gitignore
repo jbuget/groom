@@ -36,3 +36,4 @@ __debug_*
 postgres-data/
 
 service_account.json
+**/.claude/settings.local.json

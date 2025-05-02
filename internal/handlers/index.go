@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	googleapi "groom/internal/google"
 	"groom/internal/models"
 	"net/http"
+	"sort"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,7 +34,27 @@ func getRoomParticipantCount(spaceID string, activeConferences []*googleapi.Conf
 // GET /
 func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		rooms, err := models.GetAllRooms(db)
+		// Get user ID from session for star status
+
+		session := sessions.Default(c)
+		userID := session.Get("user")
+		userId := ""
+		if userID != nil {
+			userId = userID.(string)
+		}
+
+		fmt.Println("session:", session)
+
+		// Get rooms with star status if user is logged in
+		var rooms []models.Room
+		var err error
+
+		if userId != "" {
+			rooms, err = models.GetAllRoomsWithStarStatus(db, userId)
+		} else {
+			rooms, err = models.GetAllRooms(db)
+		}
+
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Unable to retrieve rooms")
 			return
@@ -49,6 +72,7 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			SpaceID          string `json:"space_id"`
 			IsOccupied       bool   `json:"is_occupied"`
 			ParticipantCount int    `json:"participant_count"`
+			IsStarred        bool   `json:"is_starred"`
 		}
 
 		var occupiedRooms []RoomView
@@ -62,6 +86,7 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 				SpaceID:          room.SpaceID,
 				IsOccupied:       isOccupied,
 				ParticipantCount: getRoomParticipantCount(room.SpaceID, activeConferences),
+				IsStarred:        room.IsStarred,
 			}
 
 			if isOccupied {
@@ -71,9 +96,23 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			}
 		}
 
+		// Sort unoccupied rooms - starred rooms first, then by slug
+		// This is unnecessary if GetAllRoomsWithStarStatus is used, but keeping for safety
+		if userId != "" {
+			sort.SliceStable(unoccupiedRooms, func(i, j int) bool {
+				// Sort by star status first (starred rooms come first)
+				if unoccupiedRooms[i].IsStarred != unoccupiedRooms[j].IsStarred {
+					return unoccupiedRooms[i].IsStarred
+				}
+				// Then sort by slug
+				return unoccupiedRooms[i].Slug < unoccupiedRooms[j].Slug
+			})
+		}
+
 		c.HTML(http.StatusOK, "list.html", gin.H{
 			"occupiedRooms":   occupiedRooms,
 			"unoccupiedRooms": unoccupiedRooms,
+			"isAuthenticated": userId != "",
 		})
 	}
 }

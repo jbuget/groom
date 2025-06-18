@@ -1,5 +1,5 @@
 // Configuration for room status updates
-const STATUS_UPDATE_INTERVAL = 15000; // 15 seconds
+const STATUS_UPDATE_INTERVAL_IN_MS = 15000;
 let statusUpdateTimer = null;
 let roomStatusData = null;
 
@@ -41,7 +41,7 @@ function handleVisibilityChange() {
 
 function startStatusPolling() {
     if (!statusUpdateTimer) {
-        statusUpdateTimer = setInterval(fetchRoomStatus, STATUS_UPDATE_INTERVAL);
+        statusUpdateTimer = setInterval(fetchRoomStatus, STATUS_UPDATE_INTERVAL_IN_MS);
     }
 }
 

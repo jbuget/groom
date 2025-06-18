@@ -43,6 +43,3 @@ func RunMigrations(migrationsPath string, databaseName string) error {
 	return nil
 }
 
-func Connect(databaseURL string) (*sql.DB, error) {
-	return sql.Open("pgx", databaseURL)
-}

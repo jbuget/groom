@@ -46,31 +46,3 @@ func IsRoomStarredByUser(db *sql.DB, userID string, roomID int64) (bool, error) 
 	return isStarred, err
 }
 
-// GetStarredRoomIDsByUser returns all room IDs starred by a user
-func GetStarredRoomIDsByUser(db *sql.DB, userID string) ([]int64, error) {
-	query := `
-		SELECT room_id FROM user_starred_rooms
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-	`
-	rows, err := db.Query(query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var roomIDs []int64
-	for rows.Next() {
-		var roomID int64
-		if err := rows.Scan(&roomID); err != nil {
-			return nil, err
-		}
-		roomIDs = append(roomIDs, roomID)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return roomIDs, nil
-}

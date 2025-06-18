@@ -30,29 +30,6 @@ func GetRoomByID(db *sql.DB, id int) (*Room, error) {
 	return &room, nil
 }
 
-// GetRoomByIDWithStarStatus gets a room and includes whether it's starred by the user
-func GetRoomByIDWithStarStatus(db *sql.DB, id int, userID string) (*Room, error) {
-	query := `
-		SELECT r.id, r.slug, r.space_id, r.created_at, r.updated_at,
-		       EXISTS(SELECT 1 FROM user_starred_rooms sr WHERE sr.room_id = r.id AND sr.user_id = $2) AS is_starred
-		FROM rooms r
-		WHERE r.id = $1
-	`
-	
-	var room Room
-	err := db.QueryRow(query, id, userID).Scan(
-		&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt, &room.IsStarred,
-	)
-	
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	
-	return &room, nil
-}
 
 func GetRoomBySlug(db *sql.DB, slug string) (*Room, error) {
 	row := db.QueryRow("SELECT id, slug, space_id, created_at, updated_at FROM rooms WHERE slug = $1", slug)
@@ -70,29 +47,6 @@ func GetRoomBySlug(db *sql.DB, slug string) (*Room, error) {
 	return &room, nil
 }
 
-// GetRoomBySlugWithStarStatus gets a room by slug and includes whether it's starred by the user
-func GetRoomBySlugWithStarStatus(db *sql.DB, slug string, userID string) (*Room, error) {
-	query := `
-		SELECT r.id, r.slug, r.space_id, r.created_at, r.updated_at,
-		       EXISTS(SELECT 1 FROM user_starred_rooms sr WHERE sr.room_id = r.id AND sr.user_id = $2) AS is_starred
-		FROM rooms r
-		WHERE r.slug = $1
-	`
-	
-	var room Room
-	err := db.QueryRow(query, slug, userID).Scan(
-		&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt, &room.IsStarred,
-	)
-	
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	
-	return &room, nil
-}
 
 func GetAllRooms(db *sql.DB) ([]Room, error) {
 	var rooms []Room
@@ -179,12 +133,3 @@ func DeleteRoom(db *sql.DB, id int) error {
 	return err
 }
 
-func GetSpaceIDFromSlug(db *sql.DB, slug string) (string, error) {
-	var spaceID string
-	query := "SELECT space_id FROM rooms WHERE slug = $1"
-	err := db.QueryRow(query, slug).Scan(&spaceID)
-	if err != nil {
-		return "", err
-	}
-	return spaceID, nil
-}

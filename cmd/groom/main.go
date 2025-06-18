@@ -49,8 +49,6 @@ func main() {
 	// Protected routes (by "X-API-TOKEN" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
-		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))
-		api.GET("/room-status", handlers.GetRoomStatusHandler(db.Database, googleapi.MeetService))
 		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
@@ -59,6 +57,7 @@ func main() {
 	// User routes (require login)
 	user := r.Group("/api/user", handlers.RequireLogin())
 	{
+		user.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database, googleapi.MeetService))
 		user.POST("/rooms/:id/star", handlers.StarRoomHandler(db.Database))
 		user.DELETE("/rooms/:id/star", handlers.UnstarRoomHandler(db.Database))
 		user.POST("/rooms/:id/toggle-star", handlers.ToggleStarRoomHandler(db.Database))
@@ -69,7 +68,6 @@ func main() {
 
 	// Open routes
 	r.GET("/", handlers.RequireLogin(), handlers.ListRoomsHTMLHandler(db.Database, googleapi.MeetService))
-	r.GET("/status", handlers.RequireLogin(), handlers.GetRoomStatusHandler(db.Database, googleapi.MeetService))
 	r.GET("/:slug", handlers.RedirectHandler(db.Database, googleapi.MeetService))
 
 	// Démarrer le serveur

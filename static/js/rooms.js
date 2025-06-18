@@ -57,7 +57,7 @@ function fetchRoomStatus() {
     const indicator = document.getElementById('update-indicator');
     indicator.classList.add('updating');
     
-    fetch('/status')
+    fetch('/api/user/rooms')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');

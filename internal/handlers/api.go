@@ -13,36 +13,7 @@ import (
 )
 
 // Handler pour lister les rooms en JSON
-func ListRoomsJSONHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Get user ID from session for star status
-		session := sessions.Default(c)
-		userID := session.Get("user")
-		userId := ""
-		if userID != nil {
-			userId = userID.(string)
-		}
-
-		// Get rooms with star status if user is logged in
-		var rooms []models.Room
-		var err error
-		
-		if userId != "" {
-			rooms, err = models.GetAllRoomsWithStarStatus(db, userId)
-		} else {
-			rooms, err = models.GetAllRooms(db)
-		}
-		
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve rooms"})
-			return
-		}
-		c.JSON(http.StatusOK, rooms)
-	}
-}
-
-// GetRoomStatusHandler returns status information about all rooms
-func GetRoomStatusHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
+func ListRoomsJSONHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from session for star status
 		session := sessions.Default(c)
@@ -109,6 +80,7 @@ func GetRoomStatusHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 		c.JSON(http.StatusOK, statuses)
 	}
 }
+
 
 // Handler pour créer une room
 func CreateRoomHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {

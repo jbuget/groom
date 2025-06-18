@@ -4,221 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des salles</title>
-    <style>
-        html {
-            background: #f4f4f4;
-        }
-        body {
-            font-family: system-ui, sans-serif;
-            margin: 40px;
-        }
-        h1 {
-            color: #333;
-            align-self: flex-start;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
-        a {
-            text-decoration: none;
-            color: #007BFF;
-        }
-        a,
-        a:active,
-        a:hover,
-        a:focus {
-            text-decoration: none;
-        }
-        main {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            max-width: 50rem;
-            margin: 0 auto 3rem;
-        }
-
-        .filter-container {
-            display: flex;
-            width: 100%;
-            margin-bottom: 1rem;
-        }
-        .filter-input {
-            flex-grow: 1;
-            padding: 0.5rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-            margin-right: 1rem;
-        }
-        .filter-reset-btn {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            cursor: pointer;
-            background-color: #f4f4f4;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .filter-reset-btn:hover {
-            background-color: #ddd;
-        }
-
-        .room-list {
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.16);
-            padding: 16px 0;
-            width: 100%;
-        }
-        .room-item {
-            margin: 5px 15px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .room-item:hover,
-        .room-item:focus,
-        .room-item:active {
-            background: #f4f4f4;
-        }
-        .room-item__link {
-            padding: 7px;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-        .room-item__slug {
-            font-weight: bold;
-            color: #000;
-            display: block;
-        }
-        .room-item__space {
-            color: #aaa;
-            display: block;
-            font-size: 0.80rem;
-        }
-
-        .room-item__actions {
-            padding: 0 10px;
-        }
-
-        .room-item__copy-link-btn {
-            border: 1px solid transparent;
-            background: #f4f4f4;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-            margin-left: 10px;
-            width: 2rem;
-            height: 2rem;
-        }
-        .room-item__copy-link-btn:hover,
-        .room-item__copy-link-btn:focus,
-        .room-item__copy-link-btn:active {
-            border-color: black;
-        }
-
-        .room-item__status {
-            width: 0.5rem;
-            height: 0.5rem;
-            display: inline-block;
-            border-radius: 50%;
-            background: #3CB371;
-        }
-        .room-item__status.occupied {
-            background: red;
-        }
-        .room-item__participant-count {
-            font-size: 0.8rem;
-            font-weight: 400;
-            color: #666;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body>
+<body data-authenticated="{{ if .isAuthenticated }}true{{ else }}false{{ end }}">
     <main>
-        <h1>Liste des salles</h1>
-
-        <div class="filter-container">
-            <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." oninput="filterRooms()" onkeydown="launchRoom(event)" />
-            <button class="filter-reset-btn" onclick="resetFilter()">Réinitialiser</button>
+        <div class="header-container">
+            <h1>Liste des salles <span id="update-indicator" class="update-indicator"></span></h1>
+            {{ if not .isAuthenticated }}
+            <a href="/auth/login" class="login-link">Se connecter</a>
+            {{ else }}
+            <a href="/auth/logout" class="login-link">Se déconnecter</a>
+            {{ end }}
         </div>
 
-        <div class="room-list">
+        <div class="filter-container">
+            <input type="search" id="filter-input" class="filter-input" placeholder="Filtrer par nom de la salle..." />
+            <button class="filter-reset-btn" id="filter-reset-btn">Réinitialiser</button>
+        </div>
+
+        <div class="room-list" {{ if not .allRooms }}style="display: none"{{ end }}>
             <ul>
-                {{ range .rooms }}
+                {{ range .allRooms }}
                 <li>
-                    <div class="room-item">
+                    <div class="room-item {{ if .IsStarred }}starred{{ end }} {{ if .IsOccupied }}occupied{{ end }}" data-id="{{ .ID }}">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
-                            <span class="room-item__slug">
-                                {{ .Slug }}
-                                {{ if .IsOccupied }}
-                                <span class="room-item__status occupied"></span>
-                                <span class="room-item__participant-count">{{ .ParticipantCount }} participants</span>
-                                {{ else }}
-                                <span class="room-item__status"></span>
-                                {{ end }}    
-                            </span>
-                            <span class="room-item__space">{{ .SpaceID }}</span>
+                            <div class="room-item__header">
+                                <button class="room-item__star" title="{{ if .IsStarred }}Retirer des favoris{{ else }}Ajouter aux favoris{{ end }}">
+                                    <span class="room-item__star-icon"></span>
+                                </button>
+                                <span class="room-item__slug">{{ .Slug }}</span>
+                                {{ if gt .ParticipantCount 0 }}
+                                <span class="room-item__participant-badge">{{ .ParticipantCount }}</span>
+                                {{ end }}
+                            </div>
+                            <button class="room-item__copy-link" title="Copier le lien">
+                                <span class="room-item__copy-icon"></span>Copier le lien
+                            </button>
                         </a>
-                        <div class="room-item__actions">
-                            <button class="room-item__copy-link-btn" onclick="copyToClipboard(event, '{{ .Slug }}')" title="Copier le lien">🔗</button>
-                        </div>
                     </div>
                 </li>
-                {{ else }}
-                <li>Aucune salle définie</li>
                 {{ end }}
             </ul>
         </div>
+        
+        {{ if not .allRooms }}
+        <div class="room-list">
+            <ul>
+                <li>Aucune salle définie</li>
+            </ul>
+        </div>
+        {{ end }}
     </main>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            focusInput();
-        });
-
-        function focusInput() {
-            document.getElementById("filter-input").focus();
-        }
-
-        function copyToClipboard(event, slug) {
-            event.preventDefault();
-            const link = `${window.location.origin}/${slug}`;
-            navigator.clipboard.writeText(link);
-        }
-
-        function filterRooms() {
-            const filter = document.getElementById("filter-input").value.toLowerCase();
-            const rooms = document.querySelectorAll(".room-item");
-
-            rooms.forEach(room => {
-                const slug = room.querySelector(".room-item__slug").textContent.toLowerCase();
-                if (slug.includes(filter)) {
-                    room.style.display = "";
-                } else {
-                    room.style.display = "none";
-                }
-            });
-        }
-
-        function launchRoom(event) {
-            if (event.key === "Enter") {
-                const rooms = document.querySelectorAll(".room-item");
-                const visibleRooms = Array.from(rooms).filter(room => room.style.display !== "none");
-                if (visibleRooms.length === 1) {
-                    const link = visibleRooms[0].querySelector(".room-item__link").href;
-                    window.open(link, "_blank");
-                }
-            }
-        }
-
-        function resetFilter() {
-            document.getElementById("filter-input").value = "";
-            filterRooms();
-        }
-    </script>
+    <script src="/static/js/rooms.js"></script>
 </body>
 </html>

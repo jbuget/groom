@@ -9,6 +9,7 @@ type Room struct {
 	ID        int       `json:"id"`
 	Slug      string    `json:"slug"`
 	SpaceID   string    `json:"space_id"`
+	IsStarred bool      `json:"is_starred"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -17,6 +18,7 @@ func GetRoomByID(db *sql.DB, id int) (*Room, error) {
 	row := db.QueryRow("SELECT id, slug, space_id, created_at, updated_at FROM rooms WHERE id = $1", id)
 
 	var room Room
+	room.IsStarred = false // Default value
 
 	err := row.Scan(&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt)
 	if err != nil {
@@ -27,11 +29,13 @@ func GetRoomByID(db *sql.DB, id int) (*Room, error) {
 	}
 	return &room, nil
 }
+
 
 func GetRoomBySlug(db *sql.DB, slug string) (*Room, error) {
 	row := db.QueryRow("SELECT id, slug, space_id, created_at, updated_at FROM rooms WHERE slug = $1", slug)
 
 	var room Room
+	room.IsStarred = false // Default value
 
 	err := row.Scan(&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt)
 	if err != nil {
@@ -42,6 +46,7 @@ func GetRoomBySlug(db *sql.DB, slug string) (*Room, error) {
 	}
 	return &room, nil
 }
+
 
 func GetAllRooms(db *sql.DB) ([]Room, error) {
 	var rooms []Room
@@ -53,10 +58,46 @@ func GetAllRooms(db *sql.DB) ([]Room, error) {
 
 	for rows.Next() {
 		var room Room
+		room.IsStarred = false // Default value
 		if err := rows.Scan(&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt); err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)
+	}
+
+	return rooms, nil
+}
+
+// GetAllRoomsWithStarStatus gets all rooms with starred status for a user
+// Rooms are ordered by starred status (starred first), then by slug
+func GetAllRoomsWithStarStatus(db *sql.DB, userID string) ([]Room, error) {
+	var rooms []Room
+	
+	query := `
+		SELECT r.id, r.slug, r.space_id, r.created_at, r.updated_at,
+		       EXISTS(SELECT 1 FROM user_starred_rooms sr WHERE sr.room_id = r.id AND sr.user_id = $1) AS is_starred
+		FROM rooms r
+		ORDER BY 
+		    EXISTS(SELECT 1 FROM user_starred_rooms sr WHERE sr.room_id = r.id AND sr.user_id = $1) DESC,
+		    r.slug ASC
+	`
+	
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var room Room
+		if err := rows.Scan(&room.ID, &room.Slug, &room.SpaceID, &room.CreatedAt, &room.UpdatedAt, &room.IsStarred); err != nil {
+			return nil, err
+		}
+		rooms = append(rooms, room)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return rooms, nil
@@ -92,12 +133,3 @@ func DeleteRoom(db *sql.DB, id int) error {
 	return err
 }
 
-func GetSpaceIDFromSlug(db *sql.DB, slug string) (string, error) {
-	var spaceID string
-	query := "SELECT space_id FROM rooms WHERE slug = $1"
-	err := db.QueryRow(query, slug).Scan(&spaceID)
-	if err != nil {
-		return "", err
-	}
-	return spaceID, nil
-}

@@ -1,0 +1,278 @@
+html {
+    background: #f4f4f4;
+}
+body {
+    font-family: system-ui, sans-serif;
+    margin: 40px;
+}
+h1 {
+    color: #333;
+    margin: 0;
+}
+
+.header-container {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.login-link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    background-color: #007BFF;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.login-link:hover {
+    background-color: #0056b3;
+    color: white;
+}
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+a {
+    text-decoration: none;
+    color: #007BFF;
+}
+a,
+a:active,
+a:hover,
+a:focus {
+    text-decoration: none;
+}
+main {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    max-width: 50rem;
+    margin: 0 auto 3rem;
+}
+
+.filter-container {
+    display: flex;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+.filter-input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    margin-right: 1rem;
+}
+.filter-reset-btn {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+.filter-reset-btn:hover {
+    background-color: #ddd;
+}
+
+.room-list {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+    padding: 16px 0;
+    width: 100%;
+    margin-bottom: 20px;
+}
+.room-list h2 {
+    padding: 0 16px;
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+}
+.room-list ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 0 16px;
+}
+.room-item.occupied {
+    border-left: 4px solid #3CB371;
+}
+.room-item {
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #eee;
+    justify-content: space-between;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+}
+
+.room-item.starred {
+    border: 1px solid rgba(218, 165, 32, 0.8);
+    box-shadow: 0 2px 6px rgba(218, 165, 32, 0.3);
+}
+
+.room-item__link {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    text-decoration: none;
+    padding: 10px 10px 0 10px;
+    cursor: pointer;
+}
+.room-item__link:hover:not(:has(.room-item__copy-link:hover)) {
+    background: rgba(0, 123, 255, 0.05);
+}
+.room-item__header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .25rem;
+    position: relative;
+}
+.room-item__slug {
+    font-weight: bold;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+.room-item__copy-link {
+    font-size: 0.7rem;
+    color: #888;
+    margin: .25rem 0 8px -.5rem;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    align-self: flex-start;
+}
+.room-item__copy-link:hover {
+    color: #000;
+    background: rgba(0, 0, 0, 0.05);
+}
+.room-item__copy-link:active {
+    color: #000;
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(0.98);
+}
+.room-item__copy-icon {
+    width: 14px;
+    height: 14px;
+    display: block;
+    margin-right: 3px;
+    mask-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PHBhdGggZD0iTTE3IDJ2MmgzLjAwN2MuNTQ4IDAgLjk5My40NDUuOTkzLjk5M3YxNi4wMTRhLjk5NC45OTQgMCAwIDEtLjk5My45OTNIMy45OTNBLjk5NC45OTQgMCAwIDEgMyAyMS4wMDdWNC45OTNDMyA0LjQ0NSAzLjQ0NSA0IDMuOTkzIDRIN1YyaDEwWk03IDZINXYxNGgxNFY2aC0ydjJIN1Y2Wm04LTJIOXYyaDZWNFoiLz48L3N2Zz4=);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    background-color: currentColor;
+}
+.room-item__participant-info {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+.room-item__participant-badge,
+.room-item__star {
+    flex: 0;
+}
+.room-item__participant-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    background: #E74C3C;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 0 2px;
+    box-sizing: border-box;
+}
+
+.room-item__star {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    z-index: 2;
+    display: none;  /* Hide stars by default, show on authenticated users */
+}
+
+.room-item__star-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    background-color: #ccc;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.room-item__star:hover .room-item__star-icon {
+    background-color: #FFD700;
+}
+
+.room-item.starred .room-item__star-icon {
+    background-color: #FFD700;
+}
+
+.room-item__star.loading .room-item__star-icon {
+    animation: star-pulse 1.2s infinite;
+    background-color: #777; /* Gray color for loading state */
+}
+
+@keyframes star-pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.auth-user .room-item__star {
+    display: block;
+}
+
+.update-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.update-indicator.updating {
+    background-color: #3CB371;
+    opacity: 1;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}

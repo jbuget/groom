@@ -65,10 +65,25 @@ http://localhost:3000/ma-room
 
 ## API
 
-```shell
-# Lister les rooms
-curl http://localhost:3000/api/rooms -H "X-API-KEY: your_api_key_here" 
+### Authenticated User Endpoints (require Google OAuth login)
 
+```shell
+# Lister les rooms avec statut d'occupation et nombre de participants
+curl http://localhost:3000/api/user/rooms --cookie "session_cookie"
+
+# Ajouter une room aux favoris
+curl -X POST http://localhost:3000/api/user/rooms/1/star --cookie "session_cookie"
+
+# Retirer une room des favoris
+curl -X DELETE http://localhost:3000/api/user/rooms/1/star --cookie "session_cookie"
+
+# Basculer le statut favori d'une room
+curl -X POST http://localhost:3000/api/user/rooms/1/toggle-star --cookie "session_cookie"
+```
+
+### Admin Endpoints (require API key)
+
+```shell
 # Ajouter une room
 curl -X POST http://localhost:3000/api/rooms -d '{"slug":"nouvelle-salle"}' -H "Content-Type: application/json" -H "X-API-KEY: your_api_key_here" 
 
@@ -77,6 +92,13 @@ curl -X PUT http://localhost:3000/api/rooms/2 -d '{"slug":"salle-existante", "sp
 
 # Supprimez une room
 curl -X DELETE http://localhost:3000/api/rooms/1 -H "X-API-KEY: your_api_key_here" 
+```
+
+### System Endpoints
+
+```shell
+# Vérifier l'état de santé du système
+curl http://localhost:3000/healthz
 ```
 
 

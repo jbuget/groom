@@ -38,6 +38,9 @@ func main() {
 	// Chargement des templates HTML
 	r.LoadHTMLGlob("templates/*")
 
+	// Serves static files
+	r.Static("/static", "./static")
+
 	// Routes pour l'authentification Google
 	r.GET("/auth/login", handlers.LoginHandler)
 	r.GET("/auth/callback", handlers.AuthCallbackHandler(cfg.GoogleWorkspaceDomain))
@@ -46,10 +49,18 @@ func main() {
 	// Protected routes (by "X-API-TOKEN" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
-		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database))
 		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
+	}
+	
+	// User routes (require login)
+	user := r.Group("/api/user", handlers.RequireLogin())
+	{
+		user.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database, googleapi.MeetService))
+		user.POST("/rooms/:id/star", handlers.StarRoomHandler(db.Database))
+		user.DELETE("/rooms/:id/star", handlers.UnstarRoomHandler(db.Database))
+		user.POST("/rooms/:id/toggle-star", handlers.ToggleStarRoomHandler(db.Database))
 	}
 
 	// System routes

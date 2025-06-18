@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	googleapi "groom/internal/google"
 	"groom/internal/models"
 	"net/http"
+	"sort"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,7 +34,27 @@ func getRoomParticipantCount(spaceID string, activeConferences []*googleapi.Conf
 // GET /
 func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		rooms, err := models.GetAllRooms(db)
+		// Get user ID from session for star status
+
+		session := sessions.Default(c)
+		userID := session.Get("user")
+		userId := ""
+		if userID != nil {
+			userId = userID.(string)
+		}
+
+		fmt.Println("session:", session)
+
+		// Get rooms with star status if user is logged in
+		var rooms []models.Room
+		var err error
+
+		if userId != "" {
+			rooms, err = models.GetAllRoomsWithStarStatus(db, userId)
+		} else {
+			rooms, err = models.GetAllRooms(db)
+		}
+
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Unable to retrieve rooms")
 			return
@@ -49,23 +72,56 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			SpaceID          string `json:"space_id"`
 			IsOccupied       bool   `json:"is_occupied"`
 			ParticipantCount int    `json:"participant_count"`
+			IsStarred        bool   `json:"is_starred"`
 		}
 
-		var roomViews []RoomView
+		var allRooms []RoomView
+
 		for _, room := range rooms {
+			isOccupied := isRoomOccupied(room.SpaceID, activeConferences)
 			roomView := RoomView{
 				ID:               room.ID,
 				Slug:             room.Slug,
 				SpaceID:          room.SpaceID,
-				IsOccupied:       isRoomOccupied(room.SpaceID, activeConferences),
+				IsOccupied:       isOccupied,
 				ParticipantCount: getRoomParticipantCount(room.SpaceID, activeConferences),
+				IsStarred:        room.IsStarred,
 			}
-
-			roomViews = append(roomViews, roomView)
+			allRooms = append(allRooms, roomView)
 		}
 
+		// Sort rooms in the new order: Starred+occupied, Starred, Occupied, Rest
+		sort.SliceStable(allRooms, func(i, j int) bool {
+			roomA, roomB := allRooms[i], allRooms[j]
+			
+			// Define priority for each room type
+			getPriority := func(room RoomView) int {
+				if room.IsStarred && room.IsOccupied {
+					return 1 // Starred + occupied (highest priority)
+				} else if room.IsStarred {
+					return 2 // Starred only
+				} else if room.IsOccupied {
+					return 3 // Occupied only
+				} else {
+					return 4 // Rest (lowest priority)
+				}
+			}
+			
+			priorityA := getPriority(roomA)
+			priorityB := getPriority(roomB)
+			
+			// Sort by priority first
+			if priorityA != priorityB {
+				return priorityA < priorityB
+			}
+			
+			// Within same priority, sort by slug alphabetically
+			return roomA.Slug < roomB.Slug
+		})
+
 		c.HTML(http.StatusOK, "list.html", gin.H{
-			"rooms": roomViews,
+			"allRooms":        allRooms,
+			"isAuthenticated": userId != "",
 		})
 	}
 }

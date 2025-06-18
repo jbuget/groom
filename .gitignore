@@ -34,5 +34,3 @@ __debug_*
 #groom
 
 postgres-data/
-
-service_account.json

@@ -75,8 +75,7 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 			IsStarred        bool   `json:"is_starred"`
 		}
 
-		var occupiedRooms []RoomView
-		var unoccupiedRooms []RoomView
+		var allRooms []RoomView
 
 		for _, room := range rooms {
 			isOccupied := isRoomOccupied(room.SpaceID, activeConferences)
@@ -88,30 +87,40 @@ func ListRoomsHTMLHandler(db *sql.DB, meetService *googleapi.MeetClient) gin.Han
 				ParticipantCount: getRoomParticipantCount(room.SpaceID, activeConferences),
 				IsStarred:        room.IsStarred,
 			}
-
-			if isOccupied {
-				occupiedRooms = append(occupiedRooms, roomView)
-			} else {
-				unoccupiedRooms = append(unoccupiedRooms, roomView)
-			}
+			allRooms = append(allRooms, roomView)
 		}
 
-		// Sort unoccupied rooms - starred rooms first, then by slug
-		// This is unnecessary if GetAllRoomsWithStarStatus is used, but keeping for safety
-		if userId != "" {
-			sort.SliceStable(unoccupiedRooms, func(i, j int) bool {
-				// Sort by star status first (starred rooms come first)
-				if unoccupiedRooms[i].IsStarred != unoccupiedRooms[j].IsStarred {
-					return unoccupiedRooms[i].IsStarred
+		// Sort rooms in the new order: Starred+occupied, Starred, Occupied, Rest
+		sort.SliceStable(allRooms, func(i, j int) bool {
+			roomA, roomB := allRooms[i], allRooms[j]
+			
+			// Define priority for each room type
+			getPriority := func(room RoomView) int {
+				if room.IsStarred && room.IsOccupied {
+					return 1 // Starred + occupied (highest priority)
+				} else if room.IsStarred {
+					return 2 // Starred only
+				} else if room.IsOccupied {
+					return 3 // Occupied only
+				} else {
+					return 4 // Rest (lowest priority)
 				}
-				// Then sort by slug
-				return unoccupiedRooms[i].Slug < unoccupiedRooms[j].Slug
-			})
-		}
+			}
+			
+			priorityA := getPriority(roomA)
+			priorityB := getPriority(roomB)
+			
+			// Sort by priority first
+			if priorityA != priorityB {
+				return priorityA < priorityB
+			}
+			
+			// Within same priority, sort by slug alphabetically
+			return roomA.Slug < roomB.Slug
+		})
 
 		c.HTML(http.StatusOK, "list.html", gin.H{
-			"occupiedRooms":   occupiedRooms,
-			"unoccupiedRooms": unoccupiedRooms,
+			"allRooms":        allRooms,
 			"isAuthenticated": userId != "",
 		})
 	}

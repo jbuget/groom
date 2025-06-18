@@ -22,12 +22,11 @@
             <button class="filter-reset-btn" id="filter-reset-btn">Réinitialiser</button>
         </div>
 
-        <div class="room-list occupied-rooms" {{ if not .occupiedRooms }}style="display: none"{{ end }}>
-            <h2>Réunions en cours</h2>
+        <div class="room-list" {{ if not .allRooms }}style="display: none"{{ end }}>
             <ul>
-                {{ range .occupiedRooms }}
+                {{ range .allRooms }}
                 <li>
-                    <div class="room-item {{ if .IsStarred }}starred{{ end }}" data-id="{{ .ID }}">
+                    <div class="room-item {{ if .IsStarred }}starred{{ end }} {{ if .IsOccupied }}occupied{{ end }}" data-id="{{ .ID }}">
                         <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
                             <div class="room-item__header">
                                 <button class="room-item__star" title="{{ if .IsStarred }}Retirer des favoris{{ else }}Ajouter aux favoris{{ end }}">
@@ -47,37 +46,14 @@
                 {{ end }}
             </ul>
         </div>
-
-        <div class="room-list unoccupied-rooms" {{ if not .unoccupiedRooms }}style="display: none"{{ end }}>
-            <h2>Salles libres</h2>
-            <ul>
-                {{ range .unoccupiedRooms }}
-                <li>
-                    <div class="room-item {{ if .IsStarred }}starred{{ end }}" data-id="{{ .ID }}">
-                        <a class="room-item__link" href="/{{ .Slug }}" target="_blank" title="Rediriger vers https://meet.google.com/{{ .SpaceID }}">
-                            <div class="room-item__header">
-                                <button class="room-item__star" title="{{ if .IsStarred }}Retirer des favoris{{ else }}Ajouter aux favoris{{ end }}">
-                                    <span class="room-item__star-icon"></span>
-                                </button>
-                                <span class="room-item__slug">{{ .Slug }}</span>
-                            </div>
-                            <button class="room-item__copy-link" title="Copier le lien">
-                                <span class="room-item__copy-icon"></span>Copier le lien
-                            </button>
-                        </a>
-                    </div>
-                </li>
-                {{ end }}
-            </ul>
-        </div>
         
-        {{ if not .occupiedRooms }}{{ if not .unoccupiedRooms }}
+        {{ if not .allRooms }}
         <div class="room-list">
             <ul>
                 <li>Aucune salle définie</li>
             </ul>
         </div>
-        {{ end }}{{ end }}
+        {{ end }}
     </main>
     <script src="/static/js/rooms.js"></script>
 </body>

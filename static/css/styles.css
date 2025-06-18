@@ -100,11 +100,8 @@ main {
     gap: 10px;
     padding: 0 16px;
 }
-.occupied-rooms {
+.room-item.occupied {
     border-left: 4px solid #3CB371;
-}
-.unoccupied-rooms {
-    border-left: 4px solid #888888;
 }
 .room-item {
     border-radius: 5px;

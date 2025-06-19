@@ -1,7 +1,8 @@
 // Configuration for room status updates
-const STATUS_UPDATE_INTERVAL_IN_MS = 15000;
+const STATUS_UPDATE_INTERVAL_IN_MS = 10000;
 let statusUpdateTimer = null;
 let roomStatusData = null;
+let previousRoomData = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     focusInput();
@@ -36,6 +37,9 @@ function handleVisibilityChange() {
     } else {
         // Tab hidden - stop polling to save resources
         stopStatusPolling();
+        window.setTimeout(() => {
+            fetchRoomStatus();
+        }, STATUS_UPDATE_INTERVAL_IN_MS); // One last time, to reflect having potentially joined a room
     }
 }
 
@@ -65,9 +69,10 @@ function fetchRoomStatus() {
             return response.json();
         })
         .then(data => {
-            roomStatusData = data;
-            // Always use the Turbolinks approach to update UI
-            updateRoomUI(data);
+            // Only update UI if data has changed
+            if (!deepEqual(previousRoomData, data)) {
+                updateRoomUI(data);
+            }
         })
         .catch(error => {
             console.error('Error fetching room status:', error);
@@ -80,8 +85,8 @@ function fetchRoomStatus() {
         });
 }
 
-function updateRoomUI(statusData) {
-    // Use a Turbolinks-style approach to update the entire room list
+function updateRoomUI(data) {
+    // Use a Turbolinks-style approach to update just the room list
     fetch('/')
         .then(response => response.text())
         .then(html => {
@@ -89,33 +94,28 @@ function updateRoomUI(statusData) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Get the main content area from the fetched page
-            const newMainContent = doc.querySelector('main');
-
-            // Preserve the current filter value and focus state
+            // Get the room list from the fetched page
+            const newRoomList = doc.querySelector('.room-list');
+            
+            // Preserve the current filter value
             const currentFilterValue = document.getElementById('filter-input').value;
-            const wasFilterFocused = document.activeElement === document.getElementById('filter-input');
             
-            // Replace the current main content with the new one
-            const currentMain = document.querySelector('main');
-            currentMain.innerHTML = newMainContent.innerHTML;
+            // Replace the current room list with the new one
+            const currentRoomList = document.querySelector('.room-list');
+            currentRoomList.innerHTML = newRoomList.innerHTML;
             
-            // Restore the filter value and reapply filtering
-            const filterInput = document.getElementById('filter-input');
-            filterInput.value = currentFilterValue;
+            // Reapply filtering if needed
             if (currentFilterValue) {
                 filterRooms();
-            }
-            
-            // Restore focus if needed
-            if (wasFilterFocused) {
-                filterInput.focus();
             }
             
             // Remove all loading states from star buttons after UI update
             document.querySelectorAll('.room-item__star.loading').forEach(button => {
                 button.classList.remove('loading');
             });
+
+            previousRoomData = JSON.parse(JSON.stringify(data)); // Deep copy
+            roomStatusData = data;
         })
         .catch(error => {
             console.error('Error updating rooms UI:', error);
@@ -271,4 +271,25 @@ function launchRoom(event) {
 function resetFilter() {
     document.getElementById("filter-input").value = "";
     filterRooms();
+}
+
+function deepEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+    
+    if (obj1 == null || obj2 == null) return obj1 === obj2;
+    
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    for (let key of keys1) {
+        if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+            return false;
+        }
+    }
+    
+    return true;
 }

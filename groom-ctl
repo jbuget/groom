@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+
+set -e
+
+# Function to load configuration from file
+load_config() {
+    local config_file=""
+
+    # Check for groom.config first, then .env
+    if [[ -f "groom.config" ]]; then
+        config_file="groom.config"
+    elif [[ -f ".env" ]]; then
+        config_file=".env"
+    fi
+
+    # Load config file if it exists (env vars will override these)
+    if [[ -n "$config_file" ]]; then
+        # Export variables from config file, but don't override existing env vars
+        while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            # Remove quotes from value
+            value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+            # Only set if not already set in environment
+            if [[ -z "${!key}" ]]; then
+                export "$key=$value"
+            fi
+        done < "$config_file"
+    fi
+}
+
+# Function to check required environment variables
+check_config() {
+    if [[ -z "$GROOM_SERVICE_URL" ]]; then
+        echo "Error: GROOM_SERVICE_URL is not set"
+        echo "Set it in environment, groom.config, or .env file"
+        exit 1
+    fi
+
+    if [[ -z "$GROOM_API_KEY" ]]; then
+        echo "Error: GROOM_API_KEY is not set"
+        echo "Set it in environment, groom.config, or .env file"
+        exit 1
+    fi
+}
+
+# Load configuration
+load_config
+
+# Function to list rooms
+cmd_list() {
+    check_config
+
+    echo "Fetching rooms from $GROOM_SERVICE_URL..."
+    response=$(curl -s "${GROOM_SERVICE_URL}/api/user/rooms")
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to connect to service"
+        exit 1
+    fi
+
+    # Pretty print JSON if jq is available, otherwise raw output
+    if command -v jq &> /dev/null; then
+        echo "$response" | jq -r '.[] | "\(.id)\t\(.slug)\t\(if .is_occupied then "occupied" else "available" end)\t\(.participant_count) participants"'
+    else
+        echo "$response"
+    fi
+}
+
+# Function to create a room
+cmd_create() {
+    local slug="$1"
+
+    if [[ -z "$slug" ]]; then
+        echo "Error: Room name (slug) is required"
+        echo "Usage: groom-ctl create <room-name>"
+        exit 1
+    fi
+
+    check_config
+
+    echo "Creating room '$slug'..."
+    response=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "X-API-KEY: $GROOM_API_KEY" \
+        -d "{\"slug\":\"$slug\"}" \
+        "${GROOM_SERVICE_URL}/api/rooms")
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to connect to service"
+        exit 1
+    fi
+
+    # Check if response contains error
+    if echo "$response" | grep -q '"error"'; then
+        echo "Error creating room:"
+        if command -v jq &> /dev/null; then
+            echo "$response" | jq -r '.error'
+        else
+            echo "$response"
+        fi
+        exit 1
+    fi
+
+    echo "Room created successfully!"
+    if command -v jq &> /dev/null; then
+        echo "$response" | jq '.'
+    else
+        echo "$response"
+    fi
+}
+
+# Function to delete a room by slug
+cmd_delete() {
+    local slug="$1"
+
+    if [[ -z "$slug" ]]; then
+        echo "Error: Room name (slug) is required"
+        echo "Usage: groom-ctl delete <room-name>"
+        exit 1
+    fi
+
+    check_config
+
+    echo "Finding room '$slug'..."
+
+    # First, get the list of rooms to find the ID
+    response=$(curl -s "${GROOM_SERVICE_URL}/api/user/rooms")
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to connect to service"
+        exit 1
+    fi
+
+    # Extract room ID by slug
+    local room_id=""
+    if command -v jq &> /dev/null; then
+        room_id=$(echo "$response" | jq -r ".[] | select(.slug == \"$slug\") | .id")
+    else
+        echo "Error: jq is required for delete command"
+        echo "Install it with: brew install jq"
+        exit 1
+    fi
+
+    if [[ -z "$room_id" ]]; then
+        echo "Error: Room '$slug' not found"
+        exit 1
+    fi
+
+    echo "Deleting room '$slug' (ID: $room_id)..."
+    response=$(curl -s -X DELETE \
+        -H "X-API-KEY: $GROOM_API_KEY" \
+        "${GROOM_SERVICE_URL}/api/rooms/$room_id")
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to connect to service"
+        exit 1
+    fi
+
+    # Check if response contains error
+    if echo "$response" | grep -q '"error"'; then
+        echo "Error deleting room:"
+        echo "$response" | jq -r '.error'
+        exit 1
+    fi
+
+    echo "Room '$slug' deleted successfully!"
+}
+
+# Function to show usage
+show_usage() {
+    cat <<EOF
+groom-ctl - CLI tool for managing Groom rooms
+
+Usage:
+    groom-ctl list                  List all rooms
+    groom-ctl create <room-name>    Create a new room
+    groom-ctl delete <room-name>    Delete a room by name
+
+Configuration:
+    Set GROOM_SERVICE_URL and GROOM_API_KEY in:
+    - Environment variables (highest priority)
+    - groom.config file (second priority)
+    - .env file (third priority)
+
+    Example groom.config:
+        GROOM_SERVICE_URL=http://localhost:3000
+        GROOM_API_KEY=your_api_key_here
+
+EOF
+}
+
+# Main command dispatcher
+case "${1:-}" in
+    list)
+        cmd_list
+        ;;
+    create)
+        cmd_create "$2"
+        ;;
+    delete)
+        cmd_delete "$2"
+        ;;
+    help|--help|-h)
+        show_usage
+        ;;
+    "")
+        echo "Error: No command specified"
+        echo ""
+        show_usage
+        exit 1
+        ;;
+    *)
+        echo "Error: Unknown command '$1'"
+        echo ""
+        show_usage
+        exit 1
+        ;;
+esac

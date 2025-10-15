@@ -12,6 +12,7 @@
 # Données locales et fichiers de configuration
 .env
 *.env
+groom.config
 
 # Fichiers de logs
 *.log

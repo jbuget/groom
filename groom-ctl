@@ -61,7 +61,14 @@ cmd_list() {
 
     # Pretty print JSON if jq is available, otherwise raw output
     if command -v jq &> /dev/null; then
-        echo "$response" | jq -r '.[] | "\(.id)\t\(.slug)\t\(if .is_occupied then "occupied" else "available" end)\t\(.participant_count) participants"'
+        # Print header
+        printf "%-5s %-30s %-12s %s\n" "ID" "ROOM" "STATUS" "PARTICIPANTS"
+        printf "%-5s %-30s %-12s %s\n" "---" "----------------------------" "----------" "------------"
+
+        # Print rooms with proper column alignment
+        echo "$response" | jq -r '.[] | "\(.id)|\(.slug)|\(if .is_occupied then "occupied" else "available" end)|\(.participant_count)"' | while IFS='|' read -r id slug status count; do
+            printf "%-5s %-30s %-12s %s\n" "$id" "$slug" "$status" "$count"
+        done
     else
         echo "$response"
     fi

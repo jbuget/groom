@@ -52,7 +52,7 @@ cmd_list() {
     check_config
 
     echo "Fetching rooms from $GROOM_SERVICE_URL..."
-    response=$(curl -s "${GROOM_SERVICE_URL}/api/user/rooms")
+    response=$(curl -s -H "X-API-KEY: $GROOM_API_KEY" "${GROOM_SERVICE_URL}/api/rooms")
 
     if [[ $? -ne 0 ]]; then
         echo "Error: Failed to connect to service"
@@ -125,7 +125,7 @@ cmd_delete() {
     echo "Finding room '$slug'..."
 
     # First, get the list of rooms to find the ID
-    response=$(curl -s "${GROOM_SERVICE_URL}/api/user/rooms")
+    response=$(curl -s -H "X-API-KEY: $GROOM_API_KEY" "${GROOM_SERVICE_URL}/api/rooms")
 
     if [[ $? -ne 0 ]]; then
         echo "Error: Failed to connect to service"

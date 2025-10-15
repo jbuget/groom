@@ -46,9 +46,10 @@ func main() {
 	r.GET("/auth/callback", handlers.AuthCallbackHandler(cfg.GoogleWorkspaceDomain))
 	r.GET("/auth/logout", handlers.LogoutHandler)
 
-	// Protected routes (by "X-API-TOKEN" HTTP header)
+	// Protected routes (by "X-API-KEY" HTTP header)
 	api := r.Group("/api", handlers.ApiKeyMiddleware(cfg.APIKey))
 	{
+		api.GET("/rooms", handlers.ListRoomsJSONHandler(db.Database, googleapi.MeetService))
 		api.POST("/rooms", handlers.CreateRoomHandler(db.Database, googleapi.MeetService))
 		api.PUT("/rooms/:id", handlers.UpdateRoomHandler(db.Database))
 		api.DELETE("/rooms/:id", handlers.DeleteRoomHandler(db.Database))
